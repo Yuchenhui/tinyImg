@@ -1,0 +1,47 @@
+// Rust → UI 状态数据
+// Rust 侧通过 set_xxx() / model.push() 更新状态
+
+// 图片列表项数据
+export struct ImageItem {
+    id: int,
+    filename: string,
+    filepath: string,
+    format: string,
+    original-size: string,
+    compressed-size: string,
+    compression-ratio: string,
+    status: string,        // "pending" | "processing" | "completed" | "failed"
+    error-message: string,
+}
+
+// 预设数据
+export struct PresetItem {
+    name: string,
+    description: string,
+    builtin: bool,
+}
+
+export global AppState {
+    // 图片列表
+    in-out property <[ImageItem]> images: [];
+
+    // 全局进度
+    in-out property <float> progress: 0.0;
+    in-out property <int> total-count: 0;
+    in-out property <int> completed-count: 0;
+
+    // 状态文本
+    in-out property <string> status-text: "就绪";
+
+    // 当前预设
+    in-out property <string> current-preset: "web_optimized";
+    in-out property <[PresetItem]> presets: [];
+
+    // 设置
+    in-out property <string> language: "zh-CN";
+    in-out property <string> theme: "system";
+
+    // GPU 状态
+    in-out property <bool> gpu-available: false;
+    in-out property <string> gpu-name: "";
+}

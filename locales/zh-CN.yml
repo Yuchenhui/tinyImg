@@ -1,0 +1,10 @@
+zh-CN:
+  ready: "就绪"
+  compressing: "压缩中..."
+  completed: "已完成"
+  failed: "失败"
+  cancelled: "已取消"
+  images_count: "%{count} 张图片"
+  compression_ratio: "节省 %{ratio}%"
+  no_gpu: "GPU 不可用，使用 CPU 处理"
+  gpu_enabled: "GPU 加速已启用：%{name}"

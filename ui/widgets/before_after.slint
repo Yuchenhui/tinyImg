@@ -1,0 +1,21 @@
+import { Palette } from "../theme/palette.slint";
+import { Typography } from "../theme/typography.slint";
+
+// 压缩前后对比滑块组件（预留）
+export component BeforeAfter inherits Rectangle {
+    in property <image> before-image;
+    in property <image> after-image;
+    in property <float> split-position: 0.5;  // 0.0 ~ 1.0
+
+    border-radius: Palette.radius-md;
+    background: Palette.bg-tertiary;
+    clip: true;
+
+    // TODO: 实现滑块拖拽对比功能
+    Text {
+        text: @tr("压缩对比预览");
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        color: Palette.text-muted;
+    }
+}

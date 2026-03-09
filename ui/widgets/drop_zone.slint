@@ -1,0 +1,47 @@
+import { Palette } from "../theme/palette.slint";
+import { Typography } from "../theme/typography.slint";
+
+// 拖拽上传区域组件
+export component DropZone inherits Rectangle {
+    in property <bool> is-dragging: false;
+    callback clicked();
+
+    border-radius: Palette.radius-lg;
+    border-width: 2px;
+    border-color: is-dragging ? Palette.primary : Palette.border;
+    background: is-dragging ? Palette.primary.with-alpha(0.05) : Palette.bg-secondary;
+    min-height: 200px;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Palette.spacing-sm;
+
+        Text {
+            text: @tr("拖拽图片到这里");
+            horizontal-alignment: center;
+            font-size: Typography.font-size-lg;
+            color: Palette.text-secondary;
+        }
+
+        Text {
+            text: @tr("或点击选择文件");
+            horizontal-alignment: center;
+            font-size: Typography.font-size-sm;
+            color: Palette.text-muted;
+        }
+
+        Text {
+            text: "JPEG · PNG · WebP · AVIF · GIF · SVG · JXL";
+            horizontal-alignment: center;
+            font-size: Typography.font-size-xs;
+            color: Palette.text-muted;
+        }
+    }
+}

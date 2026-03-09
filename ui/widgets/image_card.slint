@@ -1,0 +1,77 @@
+import { Palette } from "../theme/palette.slint";
+import { Typography } from "../theme/typography.slint";
+import { ImageItem } from "../globals/state.slint";
+
+// 单个图片卡片组件
+export component ImageCard inherits Rectangle {
+    in property <ImageItem> item;
+    callback remove(int);
+
+    border-radius: Palette.radius-md;
+    border-width: 1px;
+    border-color: Palette.border;
+    background: Palette.bg-primary;
+    height: 64px;
+    padding: Palette.spacing-sm;
+
+    HorizontalLayout {
+        spacing: Palette.spacing-md;
+        alignment: stretch;
+
+        // 文件信息
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: item.filename;
+                font-size: Typography.font-size-base;
+                color: Palette.text-primary;
+                overflow: elide;
+            }
+
+            HorizontalLayout {
+                spacing: Palette.spacing-sm;
+
+                Text {
+                    text: item.format;
+                    font-size: Typography.font-size-xs;
+                    color: Palette.primary;
+                }
+
+                Text {
+                    text: item.original-size;
+                    font-size: Typography.font-size-xs;
+                    color: Palette.text-muted;
+                }
+            }
+        }
+
+        // 状态/结果
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 0;
+
+            if item.status == "completed" : Text {
+                text: item.compression-ratio;
+                font-size: Typography.font-size-sm;
+                color: Palette.success;
+                horizontal-alignment: right;
+            }
+
+            if item.status == "processing" : Text {
+                text: @tr("压缩中...");
+                font-size: Typography.font-size-sm;
+                color: Palette.warning;
+                horizontal-alignment: right;
+            }
+
+            if item.status == "failed" : Text {
+                text: @tr("失败");
+                font-size: Typography.font-size-sm;
+                color: Palette.error;
+                horizontal-alignment: right;
+            }
+        }
+    }
+}

@@ -1,0 +1,28 @@
+import { Palette } from "../theme/palette.slint";
+import { Typography } from "../theme/typography.slint";
+import { AppState } from "../globals/state.slint";
+import { AppBridge } from "../globals/bridge.slint";
+
+// 设置页面（预留骨架）
+export component SettingsPage inherits VerticalLayout {
+    spacing: Palette.spacing-md;
+    padding: Palette.spacing-lg;
+
+    Text {
+        text: @tr("设置");
+        font-size: Typography.font-size-2xl;
+        font-weight: Typography.font-weight-bold;
+        color: Palette.text-primary;
+    }
+
+    // TODO: 预设选择器
+    // TODO: 输出目录设置
+    // TODO: 语言切换
+    // TODO: 主题切换
+    // TODO: GPU 状态显示
+
+    Text {
+        text: @tr("设置页面开发中...");
+        color: Palette.text-muted;
+    }
+}

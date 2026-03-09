@@ -1,0 +1,10 @@
+en:
+  ready: "Ready"
+  compressing: "Compressing..."
+  completed: "Completed"
+  failed: "Failed"
+  cancelled: "Cancelled"
+  images_count: "%{count} images"
+  compression_ratio: "Saved %{ratio}%"
+  no_gpu: "GPU not available, using CPU"
+  gpu_enabled: "GPU acceleration enabled: %{name}"

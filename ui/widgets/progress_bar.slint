@@ -1,0 +1,24 @@
+import { Palette } from "../theme/palette.slint";
+
+// 进度条组件
+export component ProgressBar inherits Rectangle {
+    in property <float> value: 0.0;  // 0.0 ~ 1.0
+    in property <bool> show-bar: value > 0.0;
+
+    height: show-bar ? 4px : 0px;
+    border-radius: 2px;
+    background: Palette.bg-tertiary;
+
+    animate height { duration: 200ms; }
+
+    Rectangle {
+        x: 0;
+        y: 0;
+        height: parent.height;
+        width: parent.width * clamp(value, 0.0, 1.0);
+        border-radius: 2px;
+        background: Palette.primary;
+
+        animate width { duration: 300ms; easing: ease-in-out; }
+    }
+}

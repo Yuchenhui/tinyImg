@@ -1,0 +1,27 @@
+// UI → Rust 回调桥接
+// Rust 侧通过 on_xxx() 注册回调处理逻辑
+export global AppBridge {
+    // 文件操作
+    callback add-files();
+    callback add-folder();
+    callback remove-image(int);
+    callback clear-all();
+
+    // 压缩操作
+    callback compress-all();
+    callback compress-single(int);
+    callback cancel();
+
+    // 预设操作
+    callback select-preset(string);
+    callback save-custom-preset(string);
+    callback delete-preset(string);
+
+    // 设置
+    callback change-language(string);
+    callback change-theme(string);
+    callback change-output-dir(string);
+
+    // 预览
+    callback request-preview(int);
+}

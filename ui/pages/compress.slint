@@ -1,0 +1,135 @@
+import { Palette } from "../theme/palette.slint";
+import { Typography } from "../theme/typography.slint";
+import { AppBridge } from "../globals/bridge.slint";
+import { AppState, ImageItem } from "../globals/state.slint";
+import { DropZone } from "../widgets/drop_zone.slint";
+import { ImageCard } from "../widgets/image_card.slint";
+import { ProgressBar } from "../widgets/progress_bar.slint";
+
+// 主压缩页面
+export component CompressPage inherits VerticalLayout {
+    spacing: Palette.spacing-md;
+    padding: Palette.spacing-lg;
+
+    // 拖拽区域（图片列表为空时显示大区域）
+    if AppState.images.length == 0 : DropZone {
+        clicked => { AppBridge.add-files(); }
+    }
+
+    // 图片列表（有图片时显示）
+    if AppState.images.length > 0 : VerticalLayout {
+        spacing: Palette.spacing-sm;
+
+        // 工具栏
+        HorizontalLayout {
+            spacing: Palette.spacing-sm;
+            alignment: stretch;
+
+            Text {
+                text: @tr("{} 张图片", AppState.images.length);
+                font-size: Typography.font-size-base;
+                color: Palette.text-primary;
+                vertical-alignment: center;
+            }
+
+            Rectangle { horizontal-stretch: 1; }
+
+            // 添加更多
+            Rectangle {
+                border-radius: Palette.radius-sm;
+                background: Palette.bg-secondary;
+                padding: Palette.spacing-sm;
+                horizontal-stretch: 0;
+
+                TouchArea {
+                    clicked => { AppBridge.add-files(); }
+                }
+
+                Text {
+                    text: @tr("+ 添加");
+                    font-size: Typography.font-size-sm;
+                    color: Palette.primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            // 清空
+            Rectangle {
+                border-radius: Palette.radius-sm;
+                background: Palette.bg-secondary;
+                padding: Palette.spacing-sm;
+                horizontal-stretch: 0;
+
+                TouchArea {
+                    clicked => { AppBridge.clear-all(); }
+                }
+
+                Text {
+                    text: @tr("清空");
+                    font-size: Typography.font-size-sm;
+                    color: Palette.text-secondary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // 全局进度条
+        ProgressBar {
+            value: AppState.progress;
+        }
+
+        // 图片列表
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                spacing: Palette.spacing-xs;
+
+                for item[index] in AppState.images : ImageCard {
+                    item: item;
+                    remove(id) => { AppBridge.remove-image(id); }
+                }
+            }
+        }
+
+        // 底部操作栏
+        HorizontalLayout {
+            spacing: Palette.spacing-md;
+            alignment: end;
+
+            // 状态文本
+            Text {
+                text: AppState.status-text;
+                font-size: Typography.font-size-sm;
+                color: Palette.text-muted;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+
+            // 开始压缩按钮
+            Rectangle {
+                border-radius: Palette.radius-md;
+                background: Palette.primary;
+                padding-left: Palette.spacing-lg;
+                padding-right: Palette.spacing-lg;
+                padding-top: Palette.spacing-sm;
+                padding-bottom: Palette.spacing-sm;
+                horizontal-stretch: 0;
+
+                TouchArea {
+                    clicked => { AppBridge.compress-all(); }
+                }
+
+                Text {
+                    text: @tr("开始压缩");
+                    font-size: Typography.font-size-base;
+                    color: #ffffff;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

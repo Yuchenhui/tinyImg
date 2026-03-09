@@ -1,0 +1,10 @@
+ja:
+  ready: "準備完了"
+  compressing: "圧縮中..."
+  completed: "完了"
+  failed: "失敗"
+  cancelled: "キャンセル"
+  images_count: "%{count} 枚の画像"
+  compression_ratio: "%{ratio}% 削減"
+  no_gpu: "GPU が利用できません。CPU を使用します"
+  gpu_enabled: "GPU アクセラレーション有効：%{name}"
