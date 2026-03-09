@@ -129,7 +129,66 @@ impl GpuJpegEncoder {
     /// 输入: padded_w x padded_h 的 f32 像素 (0~255)
     /// 量化表: 64 个 f32 值（已按 quality 缩放）
     /// 输出: blocks_x * blocks_y * 64 个 i32 量化系数（zigzag 顺序）
+    ///
+    /// 当数据超过 GPU `max_storage_buffer_binding_size`（通常 128MB）时，
+    /// 自动按行分块处理，避免单次 dispatch 超限。
     fn gpu_dct_quantize(
+        &self,
+        channel_data: &[f32],
+        blocks_x: u32,
+        blocks_y: u32,
+        quant_table: &[f32; 64],
+    ) -> Result<Vec<i32>> {
+        let total_blocks = (blocks_x as u64) * (blocks_y as u64);
+        let input_bytes = total_blocks * 64 * 4; // f32
+        let output_bytes = total_blocks * 64 * 4; // i32
+
+        // 查询 GPU 限制（保守使用 90% 避免边界问题）
+        let max_buffer = self.device.limits().max_storage_buffer_binding_size as u64;
+        let safe_limit = max_buffer * 9 / 10;
+
+        // 需要分块的条件：输入或输出 buffer 超出安全限制
+        let needs_chunking = input_bytes > safe_limit || output_bytes > safe_limit;
+
+        if !needs_chunking {
+            return self.gpu_dct_quantize_single(channel_data, blocks_x, blocks_y, quant_table);
+        }
+
+        // 按行分块：计算每个 chunk 的最大行数
+        let bytes_per_row = (blocks_x as u64) * 64 * 4;
+        let max_rows_per_chunk = (safe_limit / bytes_per_row).max(1) as u32;
+
+        tracing::debug!(
+            "Large image: {}x{} blocks, buffer {:.1}MB > limit {:.1}MB, chunking {} rows/chunk",
+            blocks_x,
+            blocks_y,
+            input_bytes as f64 / 1024.0 / 1024.0,
+            max_buffer as f64 / 1024.0 / 1024.0,
+            max_rows_per_chunk,
+        );
+
+        let mut all_coeffs = Vec::with_capacity((total_blocks * 64) as usize);
+        let mut row_offset: u32 = 0;
+
+        while row_offset < blocks_y {
+            let chunk_rows = max_rows_per_chunk.min(blocks_y - row_offset);
+            let chunk_blocks = (blocks_x as usize) * (chunk_rows as usize);
+            let data_start = (row_offset as usize) * (blocks_x as usize) * 64;
+            let data_end = data_start + chunk_blocks * 64;
+            let chunk_data = &channel_data[data_start..data_end];
+
+            let chunk_coeffs =
+                self.gpu_dct_quantize_single(chunk_data, blocks_x, chunk_rows, quant_table)?;
+            all_coeffs.extend_from_slice(&chunk_coeffs);
+
+            row_offset += chunk_rows;
+        }
+
+        Ok(all_coeffs)
+    }
+
+    /// 单次 GPU dispatch（不分块）
+    fn gpu_dct_quantize_single(
         &self,
         channel_data: &[f32],
         blocks_x: u32,
@@ -260,7 +319,7 @@ impl Encoder for GpuJpegEncoder {
     fn encode(&self, image: &RawImage, params: &EncodeParams) -> Result<EncodedOutput> {
         let EncodeParams::Jpeg {
             quality,
-            progressive: _,
+            progressive,
         } = params
         else {
             bail!("GpuJpegEncoder requires Jpeg params");
@@ -314,6 +373,7 @@ impl Encoder for GpuJpegEncoder {
             width,
             height,
             *quality,
+            *progressive,
             &y_coeffs,
             &cb_coeffs,
             &cr_coeffs,
@@ -423,6 +483,7 @@ fn assemble_jpeg(
     width: u32,
     height: u32,
     quality: u8,
+    progressive: bool,
     y_coeffs: &[i32],
     cb_coeffs: &[i32],
     cr_coeffs: &[i32],
@@ -443,14 +504,27 @@ fn assemble_jpeg(
     write_dqt(&mut out, 0, &luma_qt);
     write_dqt(&mut out, 1, &chroma_qt);
 
-    // SOF0 (Baseline DCT)
-    write_sof0(&mut out, width as u16, height as u16);
+    if progressive {
+        // SOF2 (Progressive DCT)
+        write_sof2(&mut out, width as u16, height as u16);
 
-    // DHT (Huffman 表)
-    write_dht_tables(&mut out);
+        // DHT (Huffman 表)
+        write_dht_tables(&mut out);
 
-    // SOS (Start of Scan) + 扫描数据
-    write_sos_and_data(&mut out, y_coeffs, cb_coeffs, cr_coeffs, blocks_x, blocks_y)?;
+        // Progressive scans: DC 先行 → AC 逐步填充
+        write_progressive_scans(
+            &mut out, y_coeffs, cb_coeffs, cr_coeffs, blocks_x, blocks_y,
+        )?;
+    } else {
+        // SOF0 (Baseline DCT)
+        write_sof0(&mut out, width as u16, height as u16);
+
+        // DHT (Huffman 表)
+        write_dht_tables(&mut out);
+
+        // SOS (Start of Scan) + 扫描数据
+        write_sos_and_data(&mut out, y_coeffs, cb_coeffs, cr_coeffs, blocks_x, blocks_y)?;
+    }
 
     // EOI
     out.extend_from_slice(&[0xFF, 0xD9]);
@@ -494,6 +568,220 @@ fn write_sof0(out: &mut Vec<u8>, width: u16, height: u16) {
     out.extend_from_slice(&[2, 0x11, 1]);
     // Component 3 (Cr): ID=3, sampling=1x1, quant table=1
     out.extend_from_slice(&[3, 0x11, 1]);
+}
+
+fn write_sof2(out: &mut Vec<u8>, width: u16, height: u16) {
+    out.extend_from_slice(&[0xFF, 0xC2]); // SOF2 progressive marker
+    let len: u16 = 17;
+    out.extend_from_slice(&len.to_be_bytes());
+    out.push(8); // 8-bit precision
+    out.extend_from_slice(&height.to_be_bytes());
+    out.extend_from_slice(&width.to_be_bytes());
+    out.push(3); // 3 components
+    out.extend_from_slice(&[1, 0x22, 0]); // Y: 2x2, quant 0
+    out.extend_from_slice(&[2, 0x11, 1]); // Cb: 1x1, quant 1
+    out.extend_from_slice(&[3, 0x11, 1]); // Cr: 1x1, quant 1
+}
+
+/// Progressive JPEG 扫描方案:
+///   Scan 0: DC all (Y+Cb+Cr interleaved)  — 快速显示模糊缩略图
+///   Scan 1: Y AC 1-5                       — 低频细节
+///   Scan 2: Y AC 6-63                      — 高频细节
+///   Scan 3: Cb AC 1-63                     — 色度细节
+///   Scan 4: Cr AC 1-63                     — 色度细节
+fn write_progressive_scans(
+    out: &mut Vec<u8>,
+    y_coeffs: &[i32],
+    cb_coeffs: &[i32],
+    cr_coeffs: &[i32],
+    blocks_x: u32,
+    blocks_y: u32,
+) -> Result<()> {
+    let dc_luma = HuffTable::build(&DC_LUMA_BITS, &DC_LUMA_VALS);
+    let ac_luma = HuffTable::build(&AC_LUMA_BITS, &AC_LUMA_VALS);
+    let dc_chroma = HuffTable::build(&DC_CHROMA_BITS, &DC_CHROMA_VALS);
+    let ac_chroma = HuffTable::build(&AC_CHROMA_BITS, &AC_CHROMA_VALS);
+
+    let chroma_blocks_x = (blocks_x + 1) / 2;
+    let chroma_blocks_y = (blocks_y + 1) / 2;
+    let mcu_x = (blocks_x + 1) / 2;
+    let mcu_y = (blocks_y + 1) / 2;
+
+    // === Scan 0: DC all components (interleaved) ===
+    {
+        // SOS header: 3 components, Ss=0, Se=0
+        write_sos_header(out, &[(1, 0x00), (2, 0x11), (3, 0x11)], 0, 0, 0);
+
+        let mut writer = BitWriter::new();
+        let mut dc_y = 0i32;
+        let mut dc_cb = 0i32;
+        let mut dc_cr = 0i32;
+
+        for mcu_row in 0..mcu_y {
+            for mcu_col in 0..mcu_x {
+                // 4 Y DC
+                for dy in 0..2u32 {
+                    for dx in 0..2u32 {
+                        let bx = mcu_col * 2 + dx;
+                        let by = mcu_row * 2 + dy;
+                        let dc_val = if bx < blocks_x && by < blocks_y {
+                            y_coeffs[((by * blocks_x + bx) * 64) as usize]
+                        } else {
+                            dc_y // repeat last DC for out-of-bounds
+                        };
+                        encode_dc(&mut writer, dc_val, &mut dc_y, &dc_luma);
+                    }
+                }
+                // 1 Cb DC
+                let cb_idx = (mcu_row * chroma_blocks_x + mcu_col) as usize;
+                let cb_dc = if cb_idx * 64 < cb_coeffs.len() {
+                    cb_coeffs[cb_idx * 64]
+                } else {
+                    dc_cb
+                };
+                encode_dc(&mut writer, cb_dc, &mut dc_cb, &dc_chroma);
+                // 1 Cr DC
+                let cr_dc = if cb_idx * 64 < cr_coeffs.len() {
+                    cr_coeffs[cb_idx * 64]
+                } else {
+                    dc_cr
+                };
+                encode_dc(&mut writer, cr_dc, &mut dc_cr, &dc_chroma);
+            }
+        }
+        writer.flush();
+        out.extend_from_slice(&writer.data);
+    }
+
+    // === Scan 1: Y AC 1-5 (non-interleaved) ===
+    write_progressive_ac_scan(
+        out, y_coeffs, blocks_x, blocks_y, 1, 5, &ac_luma, 1, 0x00,
+    );
+
+    // === Scan 2: Y AC 6-63 (non-interleaved) ===
+    write_progressive_ac_scan(
+        out, y_coeffs, blocks_x, blocks_y, 6, 63, &ac_luma, 1, 0x00,
+    );
+
+    // === Scan 3: Cb AC 1-63 (non-interleaved) ===
+    write_progressive_ac_scan(
+        out,
+        cb_coeffs,
+        chroma_blocks_x,
+        chroma_blocks_y,
+        1,
+        63,
+        &ac_chroma,
+        2,
+        0x11,
+    );
+
+    // === Scan 4: Cr AC 1-63 (non-interleaved) ===
+    write_progressive_ac_scan(
+        out,
+        cr_coeffs,
+        chroma_blocks_x,
+        chroma_blocks_y,
+        1,
+        63,
+        &ac_chroma,
+        3,
+        0x11,
+    );
+
+    Ok(())
+}
+
+/// 写入 SOS header
+fn write_sos_header(
+    out: &mut Vec<u8>,
+    components: &[(u8, u8)], // (component_id, dc_ac_table_selector)
+    ss: u8,                  // spectral selection start
+    se: u8,                  // spectral selection end
+    ahl: u8,                 // successive approximation (Ah << 4 | Al)
+) {
+    out.extend_from_slice(&[0xFF, 0xDA]);
+    let len: u16 = 2 + 1 + (components.len() as u16) * 2 + 3;
+    out.extend_from_slice(&len.to_be_bytes());
+    out.push(components.len() as u8);
+    for &(id, selector) in components {
+        out.push(id);
+        out.push(selector);
+    }
+    out.push(ss);
+    out.push(se);
+    out.push(ahl);
+}
+
+/// 编码一个 DC 系数（差分编码）
+fn encode_dc(writer: &mut BitWriter, dc_val: i32, prev_dc: &mut i32, dc_table: &HuffTable) {
+    let dc_diff = dc_val - *prev_dc;
+    *prev_dc = dc_val;
+    let (category, extra) = encode_value(dc_diff);
+    writer.write_bits(dc_table.code[category as usize], dc_table.size[category as usize]);
+    if category > 0 {
+        writer.write_bits(extra, category);
+    }
+}
+
+/// 写入 progressive AC 扫描（非交织，单组件）
+fn write_progressive_ac_scan(
+    out: &mut Vec<u8>,
+    coeffs: &[i32],
+    blocks_x: u32,
+    blocks_y: u32,
+    ss: u8,  // start of spectral selection
+    se: u8,  // end of spectral selection
+    ac_table: &HuffTable,
+    comp_id: u8,
+    table_selector: u8,
+) {
+    write_sos_header(out, &[(comp_id, table_selector)], ss, se, 0);
+
+    let mut writer = BitWriter::new();
+    let total_blocks = blocks_x * blocks_y;
+
+    for block in 0..total_blocks {
+        let base = (block * 64) as usize;
+        if base + 64 > coeffs.len() {
+            // 超出范围写零块
+            let eob_symbol = 0x00u8;
+            writer.write_bits(ac_table.code[eob_symbol as usize], ac_table.size[eob_symbol as usize]);
+            continue;
+        }
+
+        let block_coeffs = &coeffs[base..base + 64];
+        let mut zero_run = 0u8;
+        let mut wrote_nonzero = false;
+
+        for i in (ss as usize)..=(se as usize) {
+            if block_coeffs[i] == 0 {
+                zero_run += 1;
+            } else {
+                while zero_run >= 16 {
+                    writer.write_bits(ac_table.code[0xF0], ac_table.size[0xF0]);
+                    zero_run -= 16;
+                }
+                let (category, extra) = encode_value(block_coeffs[i]);
+                let symbol = (zero_run << 4) | category;
+                writer.write_bits(
+                    ac_table.code[symbol as usize],
+                    ac_table.size[symbol as usize],
+                );
+                writer.write_bits(extra, category);
+                zero_run = 0;
+                wrote_nonzero = true;
+            }
+        }
+
+        // EOB
+        if zero_run > 0 || !wrote_nonzero {
+            writer.write_bits(ac_table.code[0x00], ac_table.size[0x00]);
+        }
+    }
+
+    writer.flush();
+    out.extend_from_slice(&writer.data);
 }
 
 // ============ 标准 JPEG Huffman 表 (Annex K) ============

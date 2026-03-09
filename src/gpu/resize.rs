@@ -134,6 +134,27 @@ impl GpuResizeProcessor {
         Some((dst_w.max(1), dst_h.max(1)))
     }
 
+    /// 检查输入/输出 buffer 是否超出 GPU 限制
+    fn exceeds_gpu_limit(&self, src_w: u32, src_h: u32, dst_w: u32, dst_h: u32) -> bool {
+        let max_buffer = self.device.limits().max_storage_buffer_binding_size as u64;
+        let input_bytes = (src_w as u64) * (src_h as u64) * 4;
+        let output_bytes = (dst_w as u64) * (dst_h as u64) * 4;
+        input_bytes > max_buffer || output_bytes > max_buffer
+    }
+
+    /// CPU 回退缩放（用于超大图超出 GPU buffer 限制的情况）
+    fn cpu_resize_fallback(
+        &self,
+        image: &image::DynamicImage,
+        dst_w: u32,
+        dst_h: u32,
+    ) -> image::DynamicImage {
+        tracing::warn!(
+            "Image too large for GPU resize, falling back to CPU (fast_image_resize)"
+        );
+        image.resize_exact(dst_w, dst_h, image::imageops::FilterType::Lanczos3)
+    }
+
     /// 在 GPU 上执行缩放（使用缓存的 pipeline）
     fn gpu_resize(&self, rgba_data: &[u8], src_w: u32, src_h: u32, dst_w: u32, dst_h: u32) -> Result<Vec<u8>> {
         let device = &self.device;
@@ -252,6 +273,17 @@ impl Preprocessor for GpuResizeProcessor {
             Some(size) => size,
             None => return Ok(image), // 无需缩放
         };
+
+        // 超大图回退 CPU
+        if self.exceeds_gpu_limit(src_w, src_h, dst_w, dst_h) {
+            let resized = self.cpu_resize_fallback(&image.pixels, dst_w, dst_h);
+            return Ok(RawImage {
+                pixels: resized,
+                source_format: image.source_format,
+                metadata: image.metadata,
+                source_path: image.source_path,
+            });
+        }
 
         tracing::info!("GPU resize: {src_w}x{src_h} → {dst_w}x{dst_h}");
 
