@@ -22,26 +22,56 @@ export struct PresetItem {
 }
 
 export global AppState {
-    // 图片列表
+    // ===== 图片列表 =====
     in-out property <[ImageItem]> images: [];
 
-    // 全局进度
+    // ===== 全局进度 =====
     in-out property <float> progress: 0.0;
     in-out property <int> total-count: 0;
     in-out property <int> completed-count: 0;
-
-    // 状态文本
     in-out property <string> status-text: "就绪";
 
-    // 当前预设
+    // ===== 预设 =====
     in-out property <string> current-preset: "web_optimized";
     in-out property <[PresetItem]> presets: [];
+    in-out property <[string]> preset-names: [];
+    in-out property <int> current-preset-index: 0;
 
-    // 设置
+    // ===== 压缩参数（按格式） =====
+    // JPEG
+    in-out property <int> jpeg-quality: 80;
+    in-out property <bool> jpeg-progressive: true;
+    // PNG
+    in-out property <bool> png-lossy: false;
+    in-out property <int> png-optimization: 2;
+    // WebP
+    in-out property <int> webp-quality: 80;
+    in-out property <bool> webp-lossless: true;
+    // AVIF
+    in-out property <int> avif-quality: 70;
+    in-out property <int> avif-speed: 4;
+    // GIF
+    in-out property <int> gif-quality: 80;
+    in-out property <bool> gif-fast: false;
+
+    // ===== 输出设置 =====
+    // 输出格式: 0=保持原格式, 1=JPEG, 2=PNG, 3=WebP, 4=AVIF, 5=GIF
+    in-out property <int> output-format-index: 0;
+    in-out property <[string]> output-format-names: ["保持原格式", "JPEG", "PNG", "WebP", "AVIF", "GIF"];
+    in-out property <string> output-suffix: "_compressed";
+    in-out property <bool> output-same-dir: true;
+    in-out property <string> output-custom-dir: "";
+    in-out property <bool> overwrite: false;
+
+    // ===== 处理设置 =====
+    in-out property <bool> strip-metadata: true;
+    in-out property <bool> resize-enabled: false;
+    in-out property <int> max-width: 0;
+    in-out property <int> max-height: 0;
+
+    // ===== 系统 =====
     in-out property <string> language: "zh-CN";
     in-out property <string> theme: "system";
-
-    // GPU 状态
     in-out property <bool> gpu-available: false;
     in-out property <string> gpu-name: "";
 }

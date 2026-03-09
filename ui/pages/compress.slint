@@ -5,6 +5,7 @@ import { AppState, ImageItem } from "../globals/state.slint";
 import { DropZone } from "../widgets/drop_zone.slint";
 import { ImageCard } from "../widgets/image_card.slint";
 import { ProgressBar } from "../widgets/progress_bar.slint";
+import { ComboBox } from "std-widgets.slint";
 
 // 主压缩页面
 export component CompressPage inherits VerticalLayout {
@@ -30,6 +31,15 @@ export component CompressPage inherits VerticalLayout {
                 font-size: Typography.font-size-base;
                 color: Palette.text-primary;
                 vertical-alignment: center;
+            }
+
+            // 预设选择器
+            ComboBox {
+                model: AppState.preset-names;
+                current-index <=> AppState.current-preset-index;
+                selected(value) => { AppBridge.select-preset(value); }
+                min-width: 140px;
+                horizontal-stretch: 0;
             }
 
             Rectangle { horizontal-stretch: 1; }
