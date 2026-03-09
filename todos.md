@@ -9,8 +9,8 @@
 ## 中优先级
 
 - [x] 格式转换 UI（用户可选择输出格式，支持 JPEG/PNG/WebP/AVIF/GIF 互转）
-- [ ] JXL 编码器实现（jxl-oxide 仅解码，纯 Rust 无可用编码器；JXL 输入自动降级为 PNG 输出）
-- [ ] SVG 优化器集成（需 svgo sidecar 或 WASM）
+- [x] JXL 编码器实现 → 决定：仅解码，无纯 Rust 编码器，JXL 输入自动降级 PNG 输出
+- [x] SVG 优化器集成 → 跳过：需要 Node.js 运行时，与纯 Rust 理念冲突
 - [x] WebP 有损编码支持（添加 webp crate，libwebp 提供有损 VP8 + 质量控制）
 
 ## 低优先级
@@ -23,9 +23,9 @@
 
 ## 性能优化
 
-- [ ] 评估 zenrav1e 替代 rav1e 提升 AVIF 编码速度
-- [ ] GPU JPEG 编码器 progressive 模式支持（当前仅 baseline）
-- [ ] 大图分块 GPU 处理（避免超出 `max_storage_buffer_binding_size` 128MB 限制）
+- [x] 评估 AVIF 编码加速 → 结论：zenrav1e 不存在；保持 ravif，通过 speed 参数调优（预设已区分速度/质量）
+- [x] GPU JPEG 编码器 progressive 模式支持（SOF2 + 5-scan 渐进方案，已通过测试）
+- [x] 大图分块 GPU 处理（JPEG DCT 按行分块，Resize 超限自动 CPU 回退）
 
 ## 已完成
 
@@ -46,3 +46,6 @@
 - [x] WebP 有损编码（libwebp VP8）
 - [x] JXL/SVG 输入自动降级为 PNG 输出
 - [x] 单张压缩功能
+- [x] GPU JPEG progressive 编码（SOF2 标记 + DC/AC 分层扫描）
+- [x] 大图 GPU 分块处理（DCT 按行分块 + Resize 超限 CPU 回退）
+- [x] AVIF 编码优化评估（zenrav1e 不存在，保持 ravif + speed 参数调优）
