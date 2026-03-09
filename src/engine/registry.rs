@@ -1,4 +1,12 @@
-use crate::engine::codec::{Decoder, Encoder};
+use crate::engine::codec::avif::AvifEncoder;
+use crate::engine::codec::gif::GifEncoder;
+use crate::engine::codec::jpeg::MozjpegEncoder;
+use crate::engine::codec::jxl::JxlEncoder;
+use crate::engine::codec::png::OxipngEncoder;
+use crate::engine::codec::svg::SvgOptimizer;
+use crate::engine::codec::universal::UniversalDecoder;
+use crate::engine::codec::webp::WebpEncoder;
+use crate::engine::codec::{Codec, Decoder, Encoder};
 use crate::engine::params::ImageFormat;
 use std::collections::HashMap;
 
@@ -12,15 +20,29 @@ pub struct CodecRegistry {
 
 impl CodecRegistry {
     pub fn new() -> Self {
-        let registry = Self {
+        let mut registry = Self {
             decoders: HashMap::new(),
             encoders: HashMap::new(),
         };
-        // TODO: 注册所有内置编解码器
-        // registry.register_decoder(ImageFormat::Jpeg, Box::new(JpegDecoder));
-        // registry.register_encoder(ImageFormat::Jpeg, Box::new(MozjpegEncoder));
-        // registry.register_encoder(ImageFormat::Png, Box::new(OxipngEncoder));
-        // ...
+
+        // 注册通用解码器（image-rs 支持 JPEG/PNG/WebP/GIF）
+        let universal = UniversalDecoder;
+        for &fmt in universal.formats() {
+            // 每种格式注册同一个解码器类型的独立实例
+            registry.register_decoder(fmt, Box::new(UniversalDecoder));
+        }
+        // AVIF 也用 image-rs 解码（image 0.25 支持 AVIF 解码）
+        registry.register_decoder(ImageFormat::Avif, Box::new(UniversalDecoder));
+
+        // 注册编码器
+        registry.register_encoder(ImageFormat::Jpeg, Box::new(MozjpegEncoder));
+        registry.register_encoder(ImageFormat::Png, Box::new(OxipngEncoder));
+        registry.register_encoder(ImageFormat::WebP, Box::new(WebpEncoder));
+        registry.register_encoder(ImageFormat::Avif, Box::new(AvifEncoder));
+        registry.register_encoder(ImageFormat::Gif, Box::new(GifEncoder));
+        registry.register_encoder(ImageFormat::Jxl, Box::new(JxlEncoder));
+        registry.register_encoder(ImageFormat::Svg, Box::new(SvgOptimizer));
+
         registry
     }
 

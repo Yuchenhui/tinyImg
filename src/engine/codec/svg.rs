@@ -1,9 +1,12 @@
-use crate::engine::codec::{Codec, Encoder, EncodedOutput};
+use crate::engine::codec::{Codec, EncodedOutput, Encoder};
 use crate::engine::params::{EncodeParams, ImageFormat};
 use crate::engine::raw_image::RawImage;
 use anyhow::{bail, Result};
 
-/// svgo SVG 优化器（通过 sidecar 或 WASM 调用）
+/// SVG 优化器（需要 svgo sidecar）
+///
+/// SVG 优化通过外部 svgo 进程实现。
+/// 当前版本暂未集成 svgo sidecar，后续添加。
 pub struct SvgOptimizer;
 
 impl Codec for SvgOptimizer {
@@ -17,17 +20,12 @@ impl Codec for SvgOptimizer {
 }
 
 impl Encoder for SvgOptimizer {
-    fn encode(&self, image: &RawImage, params: &EncodeParams) -> Result<EncodedOutput> {
-        let EncodeParams::Svg {
-            multipass,
-            precision,
-        } = params
-        else {
+    fn encode(&self, _image: &RawImage, params: &EncodeParams) -> Result<EncodedOutput> {
+        let EncodeParams::Svg { .. } = params else {
             bail!("SvgOptimizer requires Svg params");
         };
 
-        // TODO: 通过 sidecar 进程调用 svgo
-        let _ = (image, multipass, precision);
-        todo!("Implement SVG optimization via svgo sidecar")
+        bail!("SVG optimization is not yet implemented. \
+               svgo sidecar integration will be added in a future version.")
     }
 }

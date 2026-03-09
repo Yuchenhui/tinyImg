@@ -4,6 +4,7 @@ pub mod jpeg;
 pub mod jxl;
 pub mod png;
 pub mod svg;
+pub mod universal;
 pub mod webp;
 
 use crate::engine::params::{EncodeParams, ImageFormat};

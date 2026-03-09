@@ -19,6 +19,7 @@ fast_image_resize = "5"
 # Compression encoders
 mozjpeg-rs = "0.8"
 oxipng = { version = "9", default-features = false }
+png = "0.17"
 imagequant = "4"          # GPL v3
 image-webp = "0.2"
 ravif = { version = "0.11", default-features = false, features = ["threading"] }
@@ -43,16 +44,20 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Platform directories
 dirs = "6"
 
+# Native file dialogs
+rfd = "0.15"
+
 # i18n (backend messages)
 rust-i18n = "3"
 
 # GPU acceleration (optional)
 wgpu = { version = "24", optional = true }
 bytemuck = { version = "1", features = ["derive"], optional = true }
+pollster = { version = "0.4", optional = true }
 
 [features]
 default = []
-gpu = ["dep:wgpu", "dep:bytemuck"]
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster"]
 
 [build-dependencies]
 slint-build = "1"
