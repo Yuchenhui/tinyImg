@@ -1,0 +1,70 @@
+[package]
+name = "tinyimg"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "AGPL-3.0-or-later"
+description = "A cross-platform desktop image compression tool with GPU acceleration"
+
+[dependencies]
+# GUI
+slint = "1"
+
+# Image fundamentals
+image = { version = "0.25", default-features = false, features = [
+    "png", "jpeg", "webp", "gif", "tiff", "bmp", "ico",
+] }
+fast_image_resize = "5"
+
+# Compression encoders
+mozjpeg-rs = "0.8"
+oxipng = { version = "9", default-features = false }
+imagequant = "4"          # GPL v3
+image-webp = "0.2"
+ravif = { version = "0.11", default-features = false, features = ["threading"] }
+jxl-oxide = "0.11"
+gifski = "1.13"           # AGPL v3
+
+# Parallelism
+rayon = "1.10"
+
+# Serialization / Config
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Platform directories
+dirs = "6"
+
+# i18n (backend messages)
+rust-i18n = "3"
+
+# GPU acceleration (optional)
+wgpu = { version = "24", optional = true }
+bytemuck = { version = "1", features = ["derive"], optional = true }
+
+[features]
+default = []
+gpu = ["dep:wgpu", "dep:bytemuck"]
+
+[build-dependencies]
+slint-build = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2

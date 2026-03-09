@@ -1,0 +1,38 @@
+# Rust
+/target/
+Cargo.lock
+/.cargo/config.toml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Build artifacts
+*.exe
+*.msi
+*.dll
+*.so
+*.dylib
+
+# Environment
+.env
+.env.local
+
+# Node (for svgo sidecar)
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# Slint generated
+*.slint.rs
+
+# Test output
+tests/output/
