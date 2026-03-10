@@ -5,16 +5,28 @@ import { ImageItem } from "../globals/state.slint";
 // 单个图片卡片组件
 export component ImageCard inherits Rectangle {
     in property <ImageItem> item;
+    in property <bool> selected: false;
     callback remove(int);
+    callback request-preview(int);
 
     border-radius: Palette.radius-md;
-    border-width: 1px;
-    border-color: Palette.border;
-    background: Palette.bg-primary;
+    border-width: selected ? 2px : 1px;
+    border-color: selected ? Palette.primary : Palette.border;
+    background: selected ? Palette.primary.with-alpha(0.05) : Palette.bg-primary;
     height: 64px;
-    padding: Palette.spacing-sm;
+
+    // 整体可点击区域（completed 状态时点击预览）
+    TouchArea {
+        mouse-cursor: item.status == "completed" ? pointer : default;
+        clicked => {
+            if (item.status == "completed") {
+                request-preview(item.id);
+            }
+        }
+    }
 
     HorizontalLayout {
+        padding: Palette.spacing-sm;
         spacing: Palette.spacing-md;
         alignment: stretch;
 

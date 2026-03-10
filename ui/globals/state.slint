@@ -12,6 +12,7 @@ export struct ImageItem {
     compression-ratio: string,
     status: string,        // "pending" | "processing" | "completed" | "failed"
     error-message: string,
+    output-path: string,   // 压缩后文件路径
 }
 
 // 预设数据
@@ -68,6 +69,18 @@ export global AppState {
     in-out property <bool> resize-enabled: false;
     in-out property <int> max-width: 0;
     in-out property <int> max-height: 0;
+
+    // ===== 预览 =====
+    in-out property <bool> preview-visible: false;
+    in-out property <int> preview-id: -1;
+    in-out property <image> preview-before-image;
+    in-out property <image> preview-after-image;
+    in-out property <string> preview-filename: "";
+    in-out property <string> preview-original-size: "";
+    in-out property <string> preview-compressed-size: "";
+    in-out property <string> preview-compression-ratio: "";
+    in-out property <string> preview-dimensions: "";
+    in-out property <bool> preview-loading: false;
 
     // ===== 系统 =====
     in-out property <string> language: "zh-CN";

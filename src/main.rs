@@ -3,7 +3,6 @@ mod config;
 mod engine;
 mod gpu;
 mod i18n;
-mod worker;
 
 use app::App;
 use config::preset::CompressionPreset;
@@ -18,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use slint::Model;
+use slint::{Model, SharedPixelBuffer, Rgba8Pixel};
 
 slint::include_modules!();
 
@@ -269,6 +268,7 @@ fn add_files_to_ui(ui: &AppWindow, paths: Vec<PathBuf>) {
             compression_ratio: slint::SharedString::default(),
             status: "pending".into(),
             error_message: slint::SharedString::default(),
+            output_path: slint::SharedString::default(),
         };
 
         vec_model.push(item);
@@ -528,6 +528,8 @@ fn setup_callbacks(ui: &AppWindow, app: App) {
                                             item.status = "completed".into();
                                             item.compressed_size =
                                                 format_size(*compressed_size).into();
+                                            item.output_path =
+                                                output_path.to_string_lossy().to_string().into();
 
                                             let original = std::fs::metadata(PathBuf::from(
                                                 item.filepath.as_str(),
@@ -596,6 +598,9 @@ fn setup_callbacks(ui: &AppWindow, app: App) {
             state.set_total_count(0);
             state.set_completed_count(0);
             state.set_status_text("就绪".into());
+            // 关闭预览面板
+            state.set_preview_visible(false);
+            state.set_preview_id(-1);
         }
     });
 
@@ -606,6 +611,12 @@ fn setup_callbacks(ui: &AppWindow, app: App) {
             let ui = ui_handle.unwrap();
             let state = ui.global::<AppState>();
             let model = state.get_images();
+
+            // 如果删除的是正在预览的图片，关闭预览
+            if state.get_preview_id() == id {
+                state.set_preview_visible(false);
+                state.set_preview_id(-1);
+            }
 
             let vec_model = model
                 .as_any()
@@ -852,6 +863,8 @@ fn setup_callbacks(ui: &AppWindow, app: App) {
                                         item.status = "completed".into();
                                         item.compressed_size =
                                             format_size(*compressed_size).into();
+                                        item.output_path =
+                                            output_path.to_string_lossy().to_string().into();
                                         let original = std::fs::metadata(PathBuf::from(
                                             item.filepath.as_str(),
                                         ))
@@ -885,10 +898,119 @@ fn setup_callbacks(ui: &AppWindow, app: App) {
         }
     });
 
-    // ===== 请求预览（暂用空实现）=====
-    bridge.on_request_preview(|_id| {
-        tracing::info!("Request preview: {_id} (not yet implemented)");
+    // ===== 请求预览 =====
+    bridge.on_request_preview({
+        let ui_handle = ui.as_weak();
+        move |id| {
+            tracing::info!("Request preview: {id}");
+            let ui = ui_handle.unwrap();
+            let state = ui.global::<AppState>();
+
+            // Toggle: 同一 ID 再次点击则关闭预览
+            if state.get_preview_visible() && state.get_preview_id() == id {
+                state.set_preview_visible(false);
+                state.set_preview_id(-1);
+                return;
+            }
+
+            // 查找对应的 ImageItem
+            let model = state.get_images();
+            let mut found_item: Option<ImageItem> = None;
+            for i in 0..model.row_count() {
+                if let Some(item) = model.row_data(i) {
+                    if item.id == id && item.status.as_str() == "completed" {
+                        found_item = Some(item);
+                        break;
+                    }
+                }
+            }
+
+            let Some(item) = found_item else { return };
+
+            let filepath = item.filepath.to_string();
+            let output_path = item.output_path.to_string();
+
+            if output_path.is_empty() {
+                tracing::warn!("No output path for image {id}");
+                return;
+            }
+
+            // 立即显示预览面板 + loading 状态
+            state.set_preview_id(id);
+            state.set_preview_visible(true);
+            state.set_preview_loading(true);
+            state.set_preview_filename(item.filename);
+            state.set_preview_original_size(item.original_size);
+            state.set_preview_compressed_size(item.compressed_size);
+            state.set_preview_compression_ratio(item.compression_ratio);
+            state.set_preview_dimensions("".into());
+
+            // 后台线程生成缩略图
+            let ui_handle_bg = ui.as_weak();
+            std::thread::spawn(move || {
+                let before_path = PathBuf::from(&filepath);
+                let after_path = PathBuf::from(&output_path);
+
+                let before_result = generate_thumbnail(&before_path, 800);
+                let after_result = generate_thumbnail(&after_path, 800);
+
+                slint::invoke_from_event_loop(move || {
+                    let ui = ui_handle_bg.unwrap();
+                    let state = ui.global::<AppState>();
+
+                    // 检查预览 ID 是否已变化（用户可能点了别的图片）
+                    if state.get_preview_id() != id {
+                        return;
+                    }
+
+                    match (before_result, after_result) {
+                        (Ok((before_buf, orig_w, orig_h)), Ok((after_buf, _, _))) => {
+                            state.set_preview_before_image(
+                                slint::Image::from_rgba8(before_buf),
+                            );
+                            state.set_preview_after_image(
+                                slint::Image::from_rgba8(after_buf),
+                            );
+                            state.set_preview_dimensions(
+                                format!("{}x{}", orig_w, orig_h).into(),
+                            );
+                            state.set_preview_loading(false);
+                        }
+                        (Err(e), _) | (_, Err(e)) => {
+                            tracing::error!("Failed to generate preview thumbnail: {e}");
+                            state.set_preview_loading(false);
+                        }
+                    }
+                })
+                .ok();
+            });
+        }
     });
+
+    // ===== 关闭预览 =====
+    bridge.on_close_preview({
+        let ui_handle = ui.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = ui.global::<AppState>();
+            state.set_preview_visible(false);
+            state.set_preview_id(-1);
+        }
+    });
+}
+
+/// 生成缩略图（最长边不超过 max_dim），返回 SharedPixelBuffer
+fn generate_thumbnail(path: &Path, max_dim: u32) -> anyhow::Result<(SharedPixelBuffer<Rgba8Pixel>, u32, u32)> {
+    let img = image::open(path)?;
+    let (orig_w, orig_h) = (img.width(), img.height());
+    let thumb = img.resize(max_dim, max_dim, image::imageops::FilterType::Triangle);
+    let rgba = thumb.to_rgba8();
+    let buf = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(
+        rgba.as_raw(),
+        rgba.width(),
+        rgba.height(),
+    );
+    Ok((buf, orig_w, orig_h))
 }
 
 /// 压缩单个文件（在工作线程中调用）
