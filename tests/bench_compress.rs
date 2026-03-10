@@ -5,8 +5,7 @@
 use image::{DynamicImage, RgbaImage};
 use std::path::PathBuf;
 use std::time::Instant;
-use tinyimg::engine::codec::universal::UniversalDecoder;
-use tinyimg::engine::codec::{Decoder, Encoder};
+use tinyimg::engine::codec::Encoder;
 use tinyimg::engine::params::{EncodeParams, ImageFormat};
 use tinyimg::engine::raw_image::RawImage;
 

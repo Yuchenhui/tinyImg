@@ -36,3 +36,4 @@ pnpm-lock.yaml
 
 # Test output
 tests/output/
+**/chat-files/*

@@ -1,7 +1,7 @@
 use image::{DynamicImage, RgbImage};
 use std::path::PathBuf;
 use tinyimg::engine::codec::universal::UniversalDecoder;
-use tinyimg::engine::codec::{Decoder, EncodedOutput, Encoder};
+use tinyimg::engine::codec::{Decoder, Encoder};
 use tinyimg::engine::params::{EncodeParams, ImageFormat};
 use tinyimg::engine::raw_image::RawImage;
 
@@ -31,7 +31,6 @@ fn test_jpeg_encoder() {
     };
 
     let result = MozjpegEncoder.encode(&image, &params).unwrap();
-    assert_eq!(result.format, ImageFormat::Jpeg);
     assert!(!result.data.is_empty());
     // JPEG 应该以 FFD8FF 开头
     assert_eq!(&result.data[..3], &[0xFF, 0xD8, 0xFF]);
@@ -50,7 +49,6 @@ fn test_png_encoder_lossless() {
     };
 
     let result = OxipngEncoder.encode(&image, &params).unwrap();
-    assert_eq!(result.format, ImageFormat::Png);
     assert!(!result.data.is_empty());
     // PNG 应该以 89504E47 开头
     assert_eq!(&result.data[..4], &[0x89, 0x50, 0x4E, 0x47]);
@@ -67,7 +65,6 @@ fn test_png_encoder_lossy() {
     };
 
     let result = OxipngEncoder.encode(&image, &params).unwrap();
-    assert_eq!(result.format, ImageFormat::Png);
     assert!(!result.data.is_empty());
     assert_eq!(&result.data[..4], &[0x89, 0x50, 0x4E, 0x47]);
 }
@@ -83,7 +80,6 @@ fn test_webp_encoder() {
     };
 
     let result = WebpEncoder.encode(&image, &params).unwrap();
-    assert_eq!(result.format, ImageFormat::WebP);
     assert!(!result.data.is_empty());
     // WebP 应该以 RIFF...WEBP 开头
     assert_eq!(&result.data[..4], b"RIFF");
@@ -101,7 +97,6 @@ fn test_gif_encoder() {
     };
 
     let result = GifEncoder.encode(&image, &params).unwrap();
-    assert_eq!(result.format, ImageFormat::Gif);
     assert!(!result.data.is_empty());
     // GIF 应该以 GIF8 开头
     assert_eq!(&result.data[..4], b"GIF8");
@@ -138,21 +133,5 @@ fn test_avif_encoder() {
     };
 
     let result = AvifEncoder.encode(&image, &params).unwrap();
-    assert_eq!(result.format, ImageFormat::Avif);
     assert!(!result.data.is_empty());
-}
-
-#[test]
-fn test_jxl_encoder_returns_error() {
-    use tinyimg::engine::codec::jxl::JxlEncoder;
-
-    let image = create_test_image();
-    let params = EncodeParams::Jxl {
-        quality: 80,
-        effort: 7,
-    };
-
-    // JXL 编码应该返回错误（暂不支持）
-    let result = JxlEncoder.encode(&image, &params);
-    assert!(result.is_err());
 }

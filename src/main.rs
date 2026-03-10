@@ -50,17 +50,42 @@ struct CompressSettings {
 
 impl CompressSettings {
     /// 从 AppState 读取当前设置（必须在 UI 线程调用）
+    /// compression-level 滑块会覆盖各格式的质量参数
     fn from_ui(state: &AppState) -> Self {
+        let compression_mode = state.get_compression_mode();
+        let mut level = (state.get_compression_level() as u8).clamp(1, 10);
+
+        // "文件大小"模式下反转方向：level 10 = 最高质量
+        if compression_mode == 1 {
+            level = 11 - level;
+        }
+
+        // 根据 compression-level 映射各格式参数
+        let (jpeg_q, png_lossy, png_opt, webp_q, avif_q, avif_speed, gif_q) = match level {
+            1  => (95u8, false, 1u8, 95u8, 90u8, 10u8, 95u8),
+            2  => (92,   false, 2,   90,   85,   8,    90),
+            3  => (88,   false, 2,   85,   80,   6,    85),
+            4  => (84,   true,  3,   80,   75,   5,    80),
+            5  => (80,   true,  3,   75,   70,   4,    75),
+            6  => (75,   true,  4,   68,   60,   4,    68),
+            7  => (68,   true,  4,   60,   50,   3,    60),
+            8  => (60,   true,  5,   50,   40,   3,    50),
+            9  => (50,   true,  5,   40,   30,   2,    40),
+            10 => (40,   true,  6,   30,   20,   1,    30),
+            _  => (80,   true,  3,   75,   70,   4,    75), // fallback to level 5
+        };
+
+        // 优先使用 level 映射值，但高级设置的独立参数仍保留（如 progressive, lossless 等 checkbox）
         Self {
-            jpeg_quality: (state.get_jpeg_quality() as u8).clamp(1, 100),
+            jpeg_quality: jpeg_q,
             jpeg_progressive: state.get_jpeg_progressive(),
-            png_lossy: state.get_png_lossy(),
-            png_optimization: (state.get_png_optimization() as u8).clamp(1, 6),
-            webp_quality: (state.get_webp_quality() as u8).clamp(1, 100),
+            png_lossy,
+            png_optimization: png_opt,
+            webp_quality: webp_q,
             webp_lossless: state.get_webp_lossless(),
-            avif_quality: (state.get_avif_quality() as u8).clamp(1, 100),
-            avif_speed: (state.get_avif_speed() as u8).clamp(1, 10),
-            gif_quality: (state.get_gif_quality() as u8).clamp(1, 100),
+            avif_quality: avif_q,
+            avif_speed,
+            gif_quality: gif_q,
             gif_fast: state.get_gif_fast(),
             output_format_index: state.get_output_format_index(),
             suffix: state.get_output_suffix().to_string(),
@@ -359,14 +384,24 @@ fn setup_callbacks(ui: &AppWindow, app: App) {
             OutputDir::SameAsInput => {
                 state.set_output_same_dir(true);
                 state.set_output_custom_dir(slint::SharedString::default());
+                if cfg.overwrite {
+                    state.set_save_path_mode(1); // 覆盖原文件
+                } else {
+                    state.set_save_path_mode(0); // 原文件夹
+                }
             }
             OutputDir::Custom(dir) => {
                 state.set_output_same_dir(false);
                 state.set_output_custom_dir(dir.clone().into());
+                state.set_save_path_mode(2); // 自定义文件夹
             }
         }
 
-        // 填充预设列表
+        // 设置默认压缩等级
+        state.set_compression_level(3);
+        state.set_compression_mode(0);
+
+        // 填充预设列表（后端保留，UI 不再展示）
         let presets = all_presets(&cfg);
         populate_presets(&state, &presets);
 
@@ -995,6 +1030,47 @@ fn setup_callbacks(ui: &AppWindow, app: App) {
             let state = ui.global::<AppState>();
             state.set_preview_visible(false);
             state.set_preview_id(-1);
+        }
+    });
+
+    // ===== 窗口控制（自定义标题栏） =====
+    bridge.on_window_close({
+        let ui_handle = ui.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.hide().ok();
+            slint::quit_event_loop().ok();
+        }
+    });
+
+    bridge.on_window_minimize({
+        let ui_handle = ui.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.window().set_minimized(true);
+        }
+    });
+
+    bridge.on_window_maximize({
+        let ui_handle = ui.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+            let win = ui.window();
+            win.set_maximized(!win.is_maximized());
+        }
+    });
+
+    bridge.on_window_drag({
+        let ui_handle = ui.as_weak();
+        move |dx, dy| {
+            let ui = ui_handle.unwrap();
+            let win = ui.window();
+            let scale = win.scale_factor();
+            let pos = win.position();
+            win.set_position(slint::PhysicalPosition::new(
+                pos.x + (dx * scale) as i32,
+                pos.y + (dy * scale) as i32,
+            ));
         }
     });
 }
