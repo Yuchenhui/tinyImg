@@ -1,0 +1,151 @@
+import { Palette } from "../theme/palette.slint";
+import { Typography } from "../theme/typography.slint";
+import { AppState } from "../globals/state.slint";
+import { AppBridge } from "../globals/bridge.slint";
+import { BeforeAfter } from "before_after.slint";
+
+// 预览弹窗 — 模态对话框，包含压缩前后对比
+export component PreviewDialog inherits Rectangle {
+    // 半透明遮罩层
+    background: Palette.overlay;
+
+    TouchArea {
+        clicked => { AppBridge.close-preview(); }
+    }
+
+    // 居中弹窗
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: min(parent.width - 80px, 800px);
+        height: min(parent.height - 80px, 600px);
+        background: Palette.bg-primary;
+        border-radius: Palette.radius-lg;
+        border-width: 1px;
+        border-color: Palette.border;
+        clip: true;
+
+        // 防止点击弹窗内部时关闭
+        TouchArea { }
+
+        VerticalLayout {
+            spacing: 0px;
+
+            // 标题栏
+            Rectangle {
+                height: 48px;
+                background: Palette.bg-secondary;
+
+                HorizontalLayout {
+                    padding-left: Palette.spacing-md;
+                    padding-right: Palette.spacing-sm;
+                    alignment: stretch;
+
+                    Text {
+                        text: AppState.preview-filename;
+                        font-size: Typography.font-size-base;
+                        font-weight: Typography.font-weight-medium;
+                        color: Palette.text-primary;
+                        overflow: elide;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+
+                    // 关闭按钮
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: Palette.radius-sm;
+                        background: close-ta.has-hover ? Palette.bg-tertiary : transparent;
+                        horizontal-stretch: 0;
+
+                        close-ta := TouchArea {
+                            clicked => { AppBridge.close-preview(); }
+                        }
+
+                        Text {
+                            text: "\u{2715}";  // ✕
+                            font-size: Typography.font-size-base;
+                            color: Palette.text-secondary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            // 分隔线
+            Rectangle { height: 1px; background: Palette.border; }
+
+            // 对比区域
+            if AppState.preview-loading : Rectangle {
+                vertical-stretch: 1;
+                background: Palette.bg-tertiary;
+
+                Text {
+                    text: @tr("加载预览中...");
+                    color: Palette.text-muted;
+                    font-size: Typography.font-size-base;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            if !AppState.preview-loading : BeforeAfter {
+                vertical-stretch: 1;
+                before-image: AppState.preview-before-image;
+                after-image: AppState.preview-after-image;
+            }
+
+            // 底部信息栏
+            Rectangle {
+                height: 36px;
+                background: Palette.bg-secondary;
+
+                HorizontalLayout {
+                    padding-left: Palette.spacing-md;
+                    padding-right: Palette.spacing-md;
+                    spacing: Palette.spacing-lg;
+                    alignment: center;
+
+                    if AppState.preview-dimensions != "" : Text {
+                        text: AppState.preview-dimensions;
+                        font-size: Typography.font-size-xs;
+                        color: Palette.text-muted;
+                        vertical-alignment: center;
+                    }
+
+                    HorizontalLayout {
+                        spacing: Palette.spacing-xs;
+                        Text {
+                            text: AppState.preview-original-size;
+                            font-size: Typography.font-size-xs;
+                            color: Palette.text-secondary;
+                            vertical-alignment: center;
+                        }
+                        Text {
+                            text: "\u{2192}";  // →
+                            font-size: Typography.font-size-xs;
+                            color: Palette.text-muted;
+                            vertical-alignment: center;
+                        }
+                        Text {
+                            text: AppState.preview-compressed-size;
+                            font-size: Typography.font-size-xs;
+                            color: Palette.text-primary;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    if AppState.preview-compression-ratio != "" : Text {
+                        text: "\u{2193}" + AppState.preview-compression-ratio;
+                        font-size: Typography.font-size-xs;
+                        color: Palette.success;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

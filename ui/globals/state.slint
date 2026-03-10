@@ -32,7 +32,23 @@ export global AppState {
     in-out property <int> completed-count: 0;
     in-out property <string> status-text: "就绪";
 
-    // ===== 预设 =====
+    // ===== 压缩等级（1-10 滑块） =====
+    // 压缩模式：0=压缩强度, 1=文件大小
+    in-out property <int> compression-mode: 0;
+    // 1-10 压缩等级
+    in-out property <int> compression-level: 3;
+
+    // ===== 高级设置展开 =====
+    in-out property <bool> show-advanced: false;
+
+    // ===== 尺寸设置 =====
+    in-out property <bool> maintain-aspect-ratio: true;
+
+    // ===== 保存路径模式 =====
+    // 0=原文件夹, 1=覆盖原文件, 2=自定义文件夹
+    in-out property <int> save-path-mode: 0;
+
+    // ===== 预设（后端保留，UI 不再展示） =====
     in-out property <string> current-preset: "web_optimized";
     in-out property <[PresetItem]> presets: [];
     in-out property <[string]> preset-names: [];

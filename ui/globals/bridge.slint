@@ -25,4 +25,10 @@ export global AppBridge {
     // 预览
     callback request-preview(int);
     callback close-preview();
+
+    // 窗口控制（自定义标题栏）
+    callback window-minimize();
+    callback window-maximize();
+    callback window-close();
+    callback window-drag(length, length);  // dx, dy 拖拽偏移量
 }

@@ -1,0 +1,150 @@
+import { Palette } from "../theme/palette.slint";
+import { Typography } from "../theme/typography.slint";
+
+// 自绘滑块
+export component CustomSlider inherits Rectangle {
+    in-out property <float> value: 50;
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+    callback changed(float);
+
+    property <float> range: maximum - minimum;
+    property <float> ratio: range > 0 ? clamp((value - minimum) / range, 0, 1) : 0;
+
+    height: 24px;
+
+    Rectangle {
+        x: 0;
+        y: (root.height - 4px) / 2;
+        width: root.width;
+        height: 4px;
+        border-radius: 2px;
+        background: #e2e8f0;
+
+        Rectangle {
+            x: 0;
+            y: 0;
+            width: parent.width * root.ratio;
+            height: parent.height;
+            border-radius: parent.border-radius;
+            background: Palette.primary;
+        }
+    }
+
+    Rectangle {
+        x: (root.width - 14px) * root.ratio;
+        y: (root.height - 14px) / 2;
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        background: white;
+        border-width: 2px;
+        border-color: touch.pressed ? Palette.primary-active : Palette.primary;
+        drop-shadow-blur: 3px;
+        drop-shadow-color: #00000020;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.value = root.minimum + root.range * clamp(self.mouse-x / root.width, 0, 1);
+                root.changed(root.value);
+            }
+        }
+
+        moved => {
+            if (self.pressed) {
+                root.value = root.minimum + root.range * clamp(self.mouse-x / root.width, 0, 1);
+                root.changed(root.value);
+            }
+        }
+    }
+}
+
+// 自绘复选框
+export component CustomCheck inherits Rectangle {
+    in-out property <bool> checked;
+    in property <string> label;
+
+    height: 24px;
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+        }
+    }
+
+    HorizontalLayout {
+        spacing: 6px;
+
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 16px;
+                height: 16px;
+                border-radius: 3px;
+                border-width: 1.5px;
+                border-color: root.checked ? Palette.primary : #cbd5e1;
+                background: root.checked ? Palette.primary : transparent;
+
+                if root.checked : Rectangle {
+                    Rectangle { x: 3px; y: 7px; width: 2px; height: 2px; background: white; }
+                    Rectangle { x: 5px; y: 9px; width: 2px; height: 2px; background: white; }
+                    Rectangle { x: 7px; y: 7px; width: 2px; height: 2px; background: white; }
+                    Rectangle { x: 9px; y: 5px; width: 2px; height: 2px; background: white; }
+                    Rectangle { x: 11px; y: 3px; width: 2px; height: 2px; background: white; }
+                }
+            }
+        }
+
+        Text {
+            text: root.label;
+            font-size: Typography.font-size-sm;
+            color: Palette.text-primary;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// 自绘输入框 — 底边线样式，紧凑
+export component CustomInput inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+
+    height: 24px;
+    background: transparent;
+    clip: true;
+
+    // 底边线
+    Rectangle {
+        y: root.height - 1px;
+        height: 1px;
+        background: input.has-focus ? Palette.primary : Palette.border;
+        animate background { duration: 120ms; }
+    }
+
+    // 占位文字
+    if root.text == "" : Text {
+        x: 2px;
+        text: root.placeholder;
+        font-size: Typography.font-size-sm;
+        color: Palette.text-muted;
+        vertical-alignment: center;
+    }
+
+    input := TextInput {
+        x: 2px;
+        width: parent.width - 4px;
+        height: parent.height;
+        text <=> root.text;
+        font-size: Typography.font-size-sm;
+        color: Palette.text-primary;
+        vertical-alignment: center;
+        selection-background-color: Palette.primary.with-alpha(0.3);
+        selection-foreground-color: Palette.text-primary;
+    }
+}

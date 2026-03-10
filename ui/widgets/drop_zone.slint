@@ -1,46 +1,76 @@
 import { Palette } from "../theme/palette.slint";
 import { Typography } from "../theme/typography.slint";
 
-// 拖拽上传区域组件
+// 拖拽上传区域组件 — 无边框，干净白底
 export component DropZone inherits Rectangle {
     in property <bool> is-dragging: false;
-    callback clicked();
 
-    border-radius: Palette.radius-lg;
-    border-width: 2px;
-    border-color: is-dragging ? Palette.primary : Palette.border;
-    background: is-dragging ? Palette.primary.with-alpha(0.05) : Palette.bg-secondary;
-    min-height: 200px;
-
+    background: is-dragging ? Palette.primary.with-alpha(0.04) : transparent;
     animate background { duration: 150ms; }
-    animate border-color { duration: 150ms; }
-
-    touch := TouchArea {
-        clicked => { root.clicked(); }
-    }
 
     VerticalLayout {
         alignment: center;
-        spacing: Palette.spacing-sm;
+        spacing: Palette.spacing-md;
+
+        // 自绘图标：虚线框内的图片图标
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: 64px;
+                height: 64px;
+                border-radius: 8px;
+                border-width: 1.5px;
+                border-color: is-dragging ? Palette.primary : Palette.border;
+
+                // 向下箭头竖线
+                Rectangle {
+                    x: (parent.width - 2px) / 2;
+                    y: parent.height * 0.22;
+                    width: 2px;
+                    height: parent.height * 0.36;
+                    background: is-dragging ? Palette.primary : Palette.text-muted;
+                }
+
+                // 底部托盘横线
+                Rectangle {
+                    x: parent.width * 0.25;
+                    y: parent.height * 0.65;
+                    width: parent.width * 0.5;
+                    height: 2px;
+                    background: is-dragging ? Palette.primary : Palette.text-muted;
+                }
+
+                // 左侧托盘竖线
+                Rectangle {
+                    x: parent.width * 0.25;
+                    y: parent.height * 0.65;
+                    width: 2px;
+                    height: parent.height * 0.12;
+                    background: is-dragging ? Palette.primary : Palette.text-muted;
+                }
+
+                // 右侧托盘竖线
+                Rectangle {
+                    x: parent.width * 0.75 - 2px;
+                    y: parent.height * 0.65;
+                    width: 2px;
+                    height: parent.height * 0.12;
+                    background: is-dragging ? Palette.primary : Palette.text-muted;
+                }
+            }
+        }
 
         Text {
-            text: @tr("拖拽图片到这里");
+            text: @tr("拖入图片文件开始压缩");
             horizontal-alignment: center;
             font-size: Typography.font-size-lg;
             color: Palette.text-secondary;
         }
 
         Text {
-            text: @tr("或点击选择文件");
+            text: @tr("支持 JPEG / PNG / WebP / AVIF / GIF / JXL 格式");
             horizontal-alignment: center;
             font-size: Typography.font-size-sm;
-            color: Palette.text-muted;
-        }
-
-        Text {
-            text: "JPEG · PNG · WebP · AVIF · GIF · SVG · JXL";
-            horizontal-alignment: center;
-            font-size: Typography.font-size-xs;
             color: Palette.text-muted;
         }
     }

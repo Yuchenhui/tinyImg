@@ -2,100 +2,143 @@ import { Palette } from "theme/palette.slint";
 import { Typography } from "theme/typography.slint";
 import { AppBridge } from "globals/bridge.slint";
 import { AppState } from "globals/state.slint";
-import { CompressPage } from "pages/compress.slint";
-import { SettingsPage } from "pages/settings.slint";
-import { AboutPage } from "pages/about.slint";
+import { MainPage } from "pages/main.slint";
+import { PreviewDialog } from "widgets/preview_dialog.slint";
 
 export { AppBridge, AppState }
 
 export component AppWindow inherits Window {
     title: "TinyImg";
-    min-width: 800px;
-    min-height: 600px;
-    preferred-width: 960px;
-    preferred-height: 680px;
+    no-frame: true;
+    default-font-family: "Microsoft YaHei";
+    default-font-size: 14px;
+    min-width: 640px;
+    min-height: 480px;
+    preferred-width: 800px;
+    preferred-height: 600px;
     background: Palette.bg-primary;
 
-    in-out property <int> current-page: 0;  // 0=compress, 1=settings, 2=about
-
-    HorizontalLayout {
-        // 侧边导航栏
+    VerticalLayout {
+        // 自定义标题栏
         Rectangle {
-            width: 48px;
+            height: 32px;
             background: Palette.bg-secondary;
-            border-width: 0px;
 
-            VerticalLayout {
-                alignment: start;
-                padding-top: Palette.spacing-md;
-                spacing: Palette.spacing-xs;
-
-                // 压缩页
-                Rectangle {
-                    height: 40px;
-                    width: 40px;
-                    x: 4px;
-                    border-radius: Palette.radius-sm;
-                    background: current-page == 0 ? Palette.primary.with-alpha(0.1) : transparent;
-
-                    TouchArea {
-                        clicked => { current-page = 0; }
-                    }
-
-                    Text {
-                        text: "🖼";
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+            // 标题区域（可拖拽）
+            title-drag := TouchArea {
+                moved => {
+                    if (self.pressed) {
+                        AppBridge.window-drag(self.mouse-x - self.pressed-x, self.mouse-y - self.pressed-y);
                     }
                 }
+                double-clicked => {
+                    AppBridge.window-maximize();
+                }
+            }
 
-                // 设置页
-                Rectangle {
-                    height: 40px;
-                    width: 40px;
-                    x: 4px;
-                    border-radius: Palette.radius-sm;
-                    background: current-page == 1 ? Palette.primary.with-alpha(0.1) : transparent;
+            HorizontalLayout {
+                padding-left: Palette.spacing-md;
+                padding-right: 0px;
+                alignment: stretch;
 
-                    TouchArea {
-                        clicked => { current-page = 1; }
-                    }
-
-                    Text {
-                        text: "⚙";
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
+                // 标题
+                Text {
+                    text: "TinyImg";
+                    font-size: Typography.font-size-sm;
+                    font-weight: Typography.font-weight-semibold;
+                    color: Palette.text-primary;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
                 }
 
-                // 关于页
-                Rectangle {
-                    height: 40px;
-                    width: 40px;
-                    x: 4px;
-                    border-radius: Palette.radius-sm;
-                    background: current-page == 2 ? Palette.primary.with-alpha(0.1) : transparent;
+                // 窗口控制按钮
+                HorizontalLayout {
+                    spacing: 0px;
+                    horizontal-stretch: 0;
 
-                    TouchArea {
-                        clicked => { current-page = 2; }
+                    // 最小化 — 自绘横线
+                    Rectangle {
+                        width: 46px;
+                        height: 32px;
+                        background: min-ta.has-hover ? Palette.bg-tertiary : transparent;
+                        animate background { duration: 120ms; }
+
+                        min-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { AppBridge.window-minimize(); }
+                        }
+
+                        // 横线图标
+                        Rectangle {
+                            x: (parent.width - 10px) / 2;
+                            y: (parent.height - 1px) / 2;
+                            width: 10px;
+                            height: 1px;
+                            background: Palette.text-secondary;
+                        }
                     }
 
-                    Text {
-                        text: "ℹ";
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    // 最大化 — 自绘空心矩形
+                    Rectangle {
+                        width: 46px;
+                        height: 32px;
+                        background: max-ta.has-hover ? Palette.bg-tertiary : transparent;
+                        animate background { duration: 120ms; }
+
+                        max-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { AppBridge.window-maximize(); }
+                        }
+
+                        // 空心矩形图标
+                        Rectangle {
+                            x: (parent.width - 10px) / 2;
+                            y: (parent.height - 10px) / 2;
+                            width: 10px;
+                            height: 10px;
+                            border-width: 1px;
+                            border-color: Palette.text-secondary;
+                            background: transparent;
+                        }
+                    }
+
+                    // 关闭 — ✕ 文字
+                    Rectangle {
+                        width: 46px;
+                        height: 32px;
+                        background: close-ta.has-hover ? #e81123 : transparent;
+                        animate background { duration: 120ms; }
+
+                        close-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { AppBridge.window-close(); }
+                        }
+
+                        Text {
+                            text: "\u{00D7}";  // × multiplication sign
+                            font-size: 16px;
+                            color: close-ta.has-hover ? #ffffff : Palette.text-secondary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
                 }
             }
+
+            // 底部分隔线
+            Rectangle {
+                y: parent.height - 1px;
+                height: 1px;
+                background: Palette.border;
+            }
         }
 
-        // 主内容区
-        Rectangle {
-            horizontal-stretch: 1;
-
-            if current-page == 0 : CompressPage {}
-            if current-page == 1 : SettingsPage {}
-            if current-page == 2 : AboutPage {}
+        // 主内容（单页面）
+        MainPage {
+            vertical-stretch: 1;
         }
     }
+
+    // 预览弹窗（覆盖层）
+    if AppState.preview-visible : PreviewDialog { }
 }

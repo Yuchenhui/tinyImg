@@ -1,0 +1,145 @@
+import { Palette } from "../theme/palette.slint";
+import { Typography } from "../theme/typography.slint";
+import { ImageItem } from "../globals/state.slint";
+
+// 表格行组件 — 替代 ImageCard，更紧凑的列表样式
+export component ImageRow inherits Rectangle {
+    in property <ImageItem> item;
+    callback request-preview(int);
+
+    height: 36px;
+    background: row-ta.has-hover ? Palette.bg-tertiary : transparent;
+    border-width: 0px;
+    border-color: Palette.border;
+
+    animate background { duration: 100ms; }
+
+    row-ta := TouchArea {
+        mouse-cursor: item.status == "completed" ? pointer : default;
+        double-clicked => {
+            if (item.status == "completed") {
+                request-preview(item.id);
+            }
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: Palette.spacing-md;
+        padding-right: Palette.spacing-md;
+        spacing: Palette.spacing-md;
+        alignment: stretch;
+
+        // 状态图标列
+        Rectangle {
+            width: 24px;
+            horizontal-stretch: 0;
+
+            if item.status == "pending" : Text {
+                text: "\u{25CB}";  // ○
+                font-size: Typography.font-size-sm;
+                color: Palette.text-muted;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            if item.status == "processing" : Text {
+                text: "\u{25CC}";  // ◌
+                font-size: Typography.font-size-sm;
+                color: Palette.primary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            if item.status == "completed" : Text {
+                text: "\u{2713}";  // ✓
+                font-size: Typography.font-size-sm;
+                color: Palette.success;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            if item.status == "failed" : Text {
+                text: "\u{2717}";  // ✗
+                font-size: Typography.font-size-sm;
+                color: Palette.error;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // 文件名列
+        Text {
+            text: item.filename;
+            font-size: Typography.font-size-sm;
+            color: Palette.text-primary;
+            overflow: elide;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+
+        // 原图大小列
+        Text {
+            text: item.original-size;
+            font-size: Typography.font-size-sm;
+            color: Palette.text-secondary;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+            horizontal-stretch: 0;
+            min-width: 70px;
+        }
+
+        // 压缩后大小 + 压缩率列
+        Rectangle {
+            horizontal-stretch: 0;
+            min-width: 110px;
+
+            if item.status == "completed" : HorizontalLayout {
+                spacing: Palette.spacing-xs;
+                alignment: end;
+                Text {
+                    text: item.compressed-size;
+                    font-size: Typography.font-size-sm;
+                    color: Palette.text-primary;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: {
+                        if (item.compression-ratio != "") {
+                            "\u{2193}" + item.compression-ratio  // ↓xx%
+                        } else {
+                            ""
+                        }
+                    };
+                    font-size: Typography.font-size-sm;
+                    color: Palette.success;
+                    vertical-alignment: center;
+                }
+            }
+            if item.status == "processing" : Text {
+                text: @tr("压缩中...");
+                font-size: Typography.font-size-sm;
+                color: Palette.primary;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+            if item.status == "failed" : Text {
+                text: @tr("失败");
+                font-size: Typography.font-size-sm;
+                color: Palette.error;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+            if item.status == "pending" : Text {
+                text: "--";
+                font-size: Typography.font-size-sm;
+                color: Palette.text-muted;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // 底部分隔线
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Palette.border;
+    }
+}
