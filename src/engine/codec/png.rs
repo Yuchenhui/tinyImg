@@ -1,21 +1,11 @@
-use crate::engine::codec::{Codec, EncodedOutput, Encoder};
-use crate::engine::params::{EncodeParams, ImageFormat};
+use crate::engine::codec::{EncodedOutput, Encoder};
+use crate::engine::params::EncodeParams;
 use crate::engine::raw_image::RawImage;
 use anyhow::{bail, Context, Result};
 use std::io::Cursor;
 
 /// oxipng 无损 PNG 优化器（可选 imagequant 有损量化）
 pub struct OxipngEncoder;
-
-impl Codec for OxipngEncoder {
-    fn name(&self) -> &'static str {
-        "oxipng"
-    }
-
-    fn formats(&self) -> &[ImageFormat] {
-        &[ImageFormat::Png]
-    }
-}
 
 impl Encoder for OxipngEncoder {
     fn encode(&self, image: &RawImage, params: &EncodeParams) -> Result<EncodedOutput> {
@@ -35,7 +25,6 @@ impl Encoder for OxipngEncoder {
 
         Ok(EncodedOutput {
             data: png_data,
-            format: ImageFormat::Png,
         })
     }
 }

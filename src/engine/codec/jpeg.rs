@@ -1,21 +1,11 @@
-use crate::engine::codec::{Codec, EncodedOutput, Encoder};
-use crate::engine::params::{EncodeParams, ImageFormat};
+use crate::engine::codec::{EncodedOutput, Encoder};
+use crate::engine::params::EncodeParams;
 use crate::engine::raw_image::RawImage;
 use anyhow::{bail, Result};
 use image::DynamicImage;
 
 /// mozjpeg-rs 纯 Rust JPEG 编码器
 pub struct MozjpegEncoder;
-
-impl Codec for MozjpegEncoder {
-    fn name(&self) -> &'static str {
-        "mozjpeg-rs"
-    }
-
-    fn formats(&self) -> &[ImageFormat] {
-        &[ImageFormat::Jpeg]
-    }
-}
 
 impl Encoder for MozjpegEncoder {
     fn encode(&self, image: &RawImage, params: &EncodeParams) -> Result<EncodedOutput> {
@@ -52,7 +42,6 @@ impl Encoder for MozjpegEncoder {
 
         Ok(EncodedOutput {
             data: data.to_vec(),
-            format: ImageFormat::Jpeg,
         })
     }
 }

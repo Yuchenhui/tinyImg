@@ -1,3 +1,4 @@
+#[cfg(feature = "gpu")]
 use std::sync::Arc;
 
 /// GPU 加速器上下文
@@ -110,20 +111,11 @@ impl GpuAccelerator {
     pub fn try_new_sync() -> Self {
         Self { available: false }
     }
-
-    pub fn unavailable() -> Self {
-        Self { available: false }
-    }
 }
 
 impl GpuAccelerator {
     /// GPU 是否可用
     pub fn is_available(&self) -> bool {
-        self.available
-    }
-
-    /// 是否支持 compute shader
-    pub fn supports_compute(&self) -> bool {
         self.available
     }
 }

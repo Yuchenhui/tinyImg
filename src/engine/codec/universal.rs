@@ -1,4 +1,4 @@
-use crate::engine::codec::{Codec, Decoder};
+use crate::engine::codec::Decoder;
 use crate::engine::params::ImageFormat;
 use crate::engine::raw_image::RawImage;
 use anyhow::{Context, Result};
@@ -8,23 +8,7 @@ use std::path::PathBuf;
 /// 基于 image-rs 的通用解码器
 ///
 /// 支持 JPEG / PNG / WebP / GIF / BMP / TIFF / ICO 等 image-rs 内置格式。
-/// AVIF / JXL / SVG 等格式需要各自的专用解码器。
 pub struct UniversalDecoder;
-
-impl Codec for UniversalDecoder {
-    fn name(&self) -> &'static str {
-        "image-rs"
-    }
-
-    fn formats(&self) -> &[ImageFormat] {
-        &[
-            ImageFormat::Jpeg,
-            ImageFormat::Png,
-            ImageFormat::WebP,
-            ImageFormat::Gif,
-        ]
-    }
-}
 
 impl Decoder for UniversalDecoder {
     fn decode(&self, data: &[u8], source_format: ImageFormat) -> Result<RawImage> {

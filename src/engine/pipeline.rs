@@ -1,4 +1,4 @@
-use crate::engine::codec::{Decoder, EncodedOutput, Encoder};
+use crate::engine::codec::{Decoder, Encoder};
 use crate::engine::params::{EncodeParams, ImageFormat};
 use crate::engine::preprocess::Preprocessor;
 use anyhow::{Context, Result};
@@ -43,8 +43,6 @@ impl CompressionPipeline {
             })
             .context("Unable to detect image format")?;
 
-        let original_size = data.len() as u64;
-
         // Stage 1: Decode
         let mut image = self
             .decoder
@@ -65,33 +63,14 @@ impl CompressionPipeline {
             .context("Encode failed")?;
 
         Ok(CompressionResult {
-            original_size,
             compressed_size: output.data.len() as u64,
             data: output.data,
-            output_format: output.format,
         })
     }
 }
 
 /// 压缩结果
 pub struct CompressionResult {
-    pub original_size: u64,
     pub compressed_size: u64,
     pub data: Vec<u8>,
-    pub output_format: ImageFormat,
-}
-
-impl CompressionResult {
-    /// 压缩率（0.0 ~ 1.0，越高越好）
-    pub fn compression_ratio(&self) -> f64 {
-        if self.original_size == 0 {
-            return 0.0;
-        }
-        1.0 - (self.compressed_size as f64 / self.original_size as f64)
-    }
-
-    /// 节省的字节数
-    pub fn bytes_saved(&self) -> i64 {
-        self.original_size as i64 - self.compressed_size as i64
-    }
 }

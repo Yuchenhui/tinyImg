@@ -5,8 +5,8 @@
 //! GPU 负责计算密集的 DCT + 量化（每个 8x8 块独立并行），
 //! CPU 负责本质串行的霍夫曼编码和码流组装。
 
-use crate::engine::codec::{Codec, EncodedOutput, Encoder};
-use crate::engine::params::{EncodeParams, ImageFormat};
+use crate::engine::codec::{EncodedOutput, Encoder};
+use crate::engine::params::EncodeParams;
 use crate::engine::raw_image::RawImage;
 use anyhow::{bail, Context, Result};
 use std::sync::Arc;
@@ -306,15 +306,6 @@ impl GpuJpegEncoder {
     }
 }
 
-impl Codec for GpuJpegEncoder {
-    fn name(&self) -> &'static str {
-        "gpu-jpeg"
-    }
-    fn formats(&self) -> &[ImageFormat] {
-        &[ImageFormat::Jpeg]
-    }
-}
-
 impl Encoder for GpuJpegEncoder {
     fn encode(&self, image: &RawImage, params: &EncodeParams) -> Result<EncodedOutput> {
         let EncodeParams::Jpeg {
@@ -383,7 +374,6 @@ impl Encoder for GpuJpegEncoder {
 
         Ok(EncodedOutput {
             data: jpeg_data,
-            format: ImageFormat::Jpeg,
         })
     }
 }

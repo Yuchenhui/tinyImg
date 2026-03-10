@@ -1,6 +1,4 @@
-pub mod color;
 pub mod metadata;
-pub mod quantize;
 pub mod resize;
 
 use crate::engine::raw_image::RawImage;

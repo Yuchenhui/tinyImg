@@ -1,5 +1,4 @@
 // RGB ↔ YCbCr 色彩空间转换 compute shader
-// TODO: 实现完整转换
 
 @group(0) @binding(0) var<storage, read> input: array<vec4<f32>>;
 @group(0) @binding(1) var<storage, read_write> output: array<vec4<f32>>;

@@ -1,5 +1,5 @@
-use crate::engine::codec::{Codec, EncodedOutput, Encoder};
-use crate::engine::params::{EncodeParams, ImageFormat};
+use crate::engine::codec::{EncodedOutput, Encoder};
+use crate::engine::params::EncodeParams;
 use crate::engine::raw_image::RawImage;
 use anyhow::{bail, Context, Result};
 
@@ -8,16 +8,6 @@ use anyhow::{bail, Context, Result};
 /// 有损模式使用 libwebp（通过 webp crate），支持质量控制。
 /// 无损模式使用 image-webp（纯 Rust VP8L）。
 pub struct WebpEncoder;
-
-impl Codec for WebpEncoder {
-    fn name(&self) -> &'static str {
-        "webp"
-    }
-
-    fn formats(&self) -> &[ImageFormat] {
-        &[ImageFormat::WebP]
-    }
-}
 
 impl Encoder for WebpEncoder {
     fn encode(&self, image: &RawImage, params: &EncodeParams) -> Result<EncodedOutput> {
@@ -45,7 +35,6 @@ impl Encoder for WebpEncoder {
 
         Ok(EncodedOutput {
             data,
-            format: ImageFormat::WebP,
         })
     }
 }

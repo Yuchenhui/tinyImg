@@ -1,21 +1,11 @@
-use crate::engine::codec::{Codec, EncodedOutput, Encoder};
-use crate::engine::params::{EncodeParams, ImageFormat};
+use crate::engine::codec::{EncodedOutput, Encoder};
+use crate::engine::params::EncodeParams;
 use crate::engine::raw_image::RawImage;
 use anyhow::{bail, Context, Result};
 use ravif::RGBA8;
 
 /// ravif 纯 Rust AVIF 编码器
 pub struct AvifEncoder;
-
-impl Codec for AvifEncoder {
-    fn name(&self) -> &'static str {
-        "ravif"
-    }
-
-    fn formats(&self) -> &[ImageFormat] {
-        &[ImageFormat::Avif]
-    }
-}
 
 impl Encoder for AvifEncoder {
     fn encode(&self, image: &RawImage, params: &EncodeParams) -> Result<EncodedOutput> {
@@ -43,7 +33,6 @@ impl Encoder for AvifEncoder {
 
         Ok(EncodedOutput {
             data: result.avif_file,
-            format: ImageFormat::Avif,
         })
     }
 }

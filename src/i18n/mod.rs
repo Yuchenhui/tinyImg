@@ -5,8 +5,3 @@ rust_i18n::i18n!("locales", fallback = "en");
 pub fn set_language(lang: &str) {
     rust_i18n::set_locale(lang);
 }
-
-/// 获取当前语言
-pub fn current_language() -> String {
-    rust_i18n::locale().to_string()
-}
