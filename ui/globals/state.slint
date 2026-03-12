@@ -35,8 +35,10 @@ export global AppState {
     // ===== 压缩等级（1-10 滑块） =====
     // 压缩模式：0=压缩强度, 1=文件大小
     in-out property <int> compression-mode: 0;
-    // 1-10 压缩等级
+    // 1-10 压缩等级（压缩强度模式）
     in-out property <int> compression-level: 3;
+    // 目标文件大小 KB（文件大小模式）
+    in-out property <int> target-size-kb: 500;
 
     // ===== 高级设置展开 =====
     in-out property <bool> show-advanced: false;

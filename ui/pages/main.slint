@@ -5,7 +5,7 @@ import { AppState, ImageItem } from "../globals/state.slint";
 import { DropZone } from "../widgets/drop_zone.slint";
 import { ImageRow } from "../widgets/image_row.slint";
 import { ProgressBar } from "../widgets/progress_bar.slint";
-import { CustomSlider, CustomCheck, CustomInput } from "../widgets/controls.slint";
+import { CustomSlider, LevelSlider, CustomCheck, CustomInput } from "../widgets/controls.slint";
 
 export component MainPage inherits VerticalLayout {
     spacing: 0px;
@@ -207,7 +207,7 @@ export component MainPage inherits VerticalLayout {
         }
     }
 
-    // ===== 区域3: 压缩等级 =====
+    // ===== 区域3: 图片尺寸设置 + 图片压缩设置（两列） =====
     Rectangle {
         height: 1px;
         background: Palette.border;
@@ -215,63 +215,208 @@ export component MainPage inherits VerticalLayout {
 
     Rectangle {
         background: Palette.bg-primary;
-        height: 52px;
 
         HorizontalLayout {
             padding-left: Palette.spacing-md;
             padding-right: Palette.spacing-md;
             padding-top: Palette.spacing-sm;
             padding-bottom: Palette.spacing-sm;
-            spacing: Palette.spacing-md;
-            alignment: stretch;
+            spacing: 0px;
 
-            Text {
-                text: @tr("压缩等级");
-                font-size: Typography.font-size-sm;
-                font-weight: Typography.font-weight-medium;
-                color: Palette.text-secondary;
-                vertical-alignment: center;
+            // ── 左侧：图片尺寸设置 ──
+            VerticalLayout {
                 horizontal-stretch: 0;
-            }
-
-            Text {
-                text: @tr("高质量");
-                font-size: Typography.font-size-xs;
-                color: Palette.text-muted;
-                vertical-alignment: center;
-                horizontal-stretch: 0;
-            }
-
-            CustomSlider {
-                minimum: 1;
-                maximum: 10;
-                value: AppState.compression-level;
-                changed(value) => { AppState.compression-level = round(value); }
-                horizontal-stretch: 1;
-            }
-
-            Text {
-                text: @tr("最小体积");
-                font-size: Typography.font-size-xs;
-                color: Palette.text-muted;
-                vertical-alignment: center;
-                horizontal-stretch: 0;
-            }
-
-            Rectangle {
-                horizontal-stretch: 0;
-                width: 56px;
-                height: 26px;
-                border-radius: Palette.radius-sm;
-                background: Palette.bg-tertiary;
+                spacing: 6px;
+                padding-right: Palette.spacing-lg;
 
                 Text {
-                    text: "Lv." + AppState.compression-level;
+                    text: @tr("图片尺寸设置");
                     font-size: Typography.font-size-xs;
-                    font-weight: Typography.font-weight-semibold;
-                    color: Palette.text-secondary;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                    color: Palette.text-muted;
+                }
+
+                HorizontalLayout {
+                    spacing: 6px;
+
+                    Text {
+                        text: @tr("宽度");
+                        font-size: Typography.font-size-sm;
+                        color: Palette.text-secondary;
+                        vertical-alignment: center;
+                    }
+
+                    CustomInput {
+                        text: AppState.resize-enabled && AppState.max-width > 0 ? AppState.max-width : @tr("自动");
+                        width: 72px;
+                    }
+
+                    Text {
+                        text: @tr("高度");
+                        font-size: Typography.font-size-sm;
+                        color: Palette.text-secondary;
+                        vertical-alignment: center;
+                    }
+
+                    CustomInput {
+                        text: AppState.resize-enabled && AppState.max-height > 0 ? AppState.max-height : @tr("自动");
+                        width: 72px;
+                    }
+                }
+
+                CustomCheck {
+                    label: @tr("保持原始宽高比");
+                    checked <=> AppState.maintain-aspect-ratio;
+                }
+            }
+
+            // ── 分隔线 ──
+            Rectangle { width: 1px; background: Palette.border; horizontal-stretch: 0; }
+
+            // ── 右侧：图片压缩设置 ──
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 6px;
+                padding-left: Palette.spacing-lg;
+
+                HorizontalLayout {
+                    spacing: 0px;
+
+                    Text {
+                        text: @tr("图片压缩设置");
+                        font-size: Typography.font-size-xs;
+                        color: Palette.text-muted;
+                        vertical-alignment: center;
+                        horizontal-stretch: 0;
+                    }
+
+                    Rectangle { width: Palette.spacing-lg; horizontal-stretch: 0; }
+
+                    // ○ 压缩强度
+                    Rectangle {
+                        width: 80px;
+                        height: 22px;
+                        horizontal-stretch: 0;
+
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { AppState.compression-mode = 0; }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 5px;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Rectangle {
+                                    width: 14px;
+                                    height: 14px;
+                                    border-radius: 7px;
+                                    border-width: 1.5px;
+                                    border-color: AppState.compression-mode == 0 ? Palette.primary : #cbd5e1;
+                                    background: transparent;
+
+                                    Rectangle {
+                                        x: 3px; y: 3px;
+                                        width: 8px; height: 8px;
+                                        border-radius: 4px;
+                                        background: AppState.compression-mode == 0 ? Palette.primary : transparent;
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: @tr("压缩强度");
+                                font-size: Typography.font-size-sm;
+                                color: Palette.text-primary;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    // ○ 文件大小
+                    Rectangle {
+                        width: 80px;
+                        height: 22px;
+                        horizontal-stretch: 0;
+
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { AppState.compression-mode = 1; }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 5px;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Rectangle {
+                                    width: 14px;
+                                    height: 14px;
+                                    border-radius: 7px;
+                                    border-width: 1.5px;
+                                    border-color: AppState.compression-mode == 1 ? Palette.primary : #cbd5e1;
+                                    background: transparent;
+
+                                    Rectangle {
+                                        x: 3px; y: 3px;
+                                        width: 8px; height: 8px;
+                                        border-radius: 4px;
+                                        background: AppState.compression-mode == 1 ? Palette.primary : transparent;
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: @tr("文件大小");
+                                font-size: Typography.font-size-sm;
+                                color: Palette.text-primary;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    Rectangle { horizontal-stretch: 1; }
+                }
+
+                // 压缩强度模式：1-10 档位滑块
+                if AppState.compression-mode == 0 : LevelSlider {
+                    value: AppState.compression-level;
+                    min: 1;
+                    max: 10;
+                    changed(v) => { AppState.compression-level = v; }
+                }
+
+                // 文件大小模式：目标大小输入
+                if AppState.compression-mode == 1 : HorizontalLayout {
+                    spacing: 6px;
+                    alignment: start;
+
+                    Text {
+                        text: @tr("目标大小");
+                        font-size: Typography.font-size-sm;
+                        color: Palette.text-secondary;
+                        vertical-alignment: center;
+                    }
+
+                    CustomInput {
+                        text: AppState.target-size-kb;
+                        width: 72px;
+                        placeholder: "500";
+                    }
+
+                    Text {
+                        text: "KB";
+                        font-size: Typography.font-size-sm;
+                        color: Palette.text-muted;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: @tr("压缩时将优先保证文件不超过此大小");
+                        font-size: Typography.font-size-xs;
+                        color: Palette.text-muted;
+                        vertical-alignment: center;
+                    }
                 }
             }
         }
@@ -473,9 +618,10 @@ export component MainPage inherits VerticalLayout {
                         }
                     }
 
-                    // 选择"其他"时的浏览按钮（蓝色文字风格）
+                    // 选择"其他"时的浏览按钮
                     if AppState.save-path-mode == 1 : Rectangle {
                         horizontal-stretch: 0;
+                        width: 24px;
                         height: 24px;
 
                         browse-ta := TouchArea {
@@ -484,14 +630,11 @@ export component MainPage inherits VerticalLayout {
                         }
 
                         Text {
-                            text: AppState.output-custom-dir != ""
-                                ? AppState.output-custom-dir
-                                : @tr("选择文件夹...");
-                            font-size: Typography.font-size-xs;
+                            text: "...";
+                            font-size: Typography.font-size-sm;
                             color: browse-ta.has-hover ? Palette.primary-hover : Palette.primary;
+                            horizontal-alignment: center;
                             vertical-alignment: center;
-                            overflow: elide;
-                            max-width: 200px;
                         }
                     }
 
@@ -531,178 +674,114 @@ export component MainPage inherits VerticalLayout {
                     Rectangle { horizontal-stretch: 1; }
                 }
 
-                // ── 图片尺寸 ──
+                if AppState.save-path-mode == 1 && AppState.output-custom-dir != "" : HorizontalLayout {
+                    padding-left: 70px;
+                    Text {
+                        text: AppState.output-custom-dir;
+                        font-size: Typography.font-size-xs;
+                        color: Palette.text-muted;
+                        overflow: elide;
+                    }
+                }
+
+                // ── 编码器参数标题 ──
                 HorizontalLayout {
-                    spacing: 0px;
+                    spacing: Palette.spacing-sm;
 
                     Text {
-                        text: @tr("图片尺寸");
-                        font-size: Typography.font-size-sm;
-                        color: Palette.text-secondary;
-                        width: 70px;
-                        horizontal-stretch: 0;
-                        vertical-alignment: center;
-                    }
-
-                    CustomCheck {
-                        label: @tr("启用缩放");
-                        checked <=> AppState.resize-enabled;
-                        horizontal-stretch: 0;
-                    }
-
-                    if AppState.resize-enabled : Rectangle { width: 16px; horizontal-stretch: 0; }
-
-                    if AppState.resize-enabled : Text {
-                        text: @tr("宽度");
-                        font-size: Typography.font-size-sm;
-                        color: Palette.text-secondary;
-                        horizontal-stretch: 0;
-                        vertical-alignment: center;
-                    }
-
-                    if AppState.resize-enabled : Rectangle { width: 6px; horizontal-stretch: 0; }
-
-                    if AppState.resize-enabled : CustomInput {
-                        text: AppState.max-width > 0 ? AppState.max-width : @tr("自动");
-                        horizontal-stretch: 0;
-                        width: 64px;
-                    }
-
-                    if AppState.resize-enabled : Rectangle { width: 12px; horizontal-stretch: 0; }
-
-                    if AppState.resize-enabled : Text {
-                        text: @tr("高度");
-                        font-size: Typography.font-size-sm;
-                        color: Palette.text-secondary;
-                        horizontal-stretch: 0;
-                        vertical-alignment: center;
-                    }
-
-                    if AppState.resize-enabled : Rectangle { width: 6px; horizontal-stretch: 0; }
-
-                    if AppState.resize-enabled : CustomInput {
-                        text: AppState.max-height > 0 ? AppState.max-height : @tr("自动");
-                        horizontal-stretch: 0;
-                        width: 64px;
-                    }
-
-                    if AppState.resize-enabled : Rectangle { width: 16px; horizontal-stretch: 0; }
-
-                    if AppState.resize-enabled : CustomCheck {
-                        label: @tr("保持宽高比");
-                        checked <=> AppState.maintain-aspect-ratio;
-                        horizontal-stretch: 0;
-                    }
-
-                    Rectangle { horizontal-stretch: 1; }
-                }
-
-                // ── 分隔线 ──
-                Rectangle { height: 1px; background: Palette.border; }
-
-                // ── JPEG + PNG ──
-                HorizontalLayout {
-                    spacing: 0px;
-
-                    HorizontalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 4px;
-                        Text { text: "JPEG"; font-size: Typography.font-size-sm; font-weight: Typography.font-weight-semibold; color: Palette.text-primary; width: 36px; horizontal-stretch: 0; vertical-alignment: center; }
-                        CustomSlider { minimum: 1; maximum: 100; value: AppState.jpeg-quality; changed(v) => { AppState.jpeg-quality = round(v); } horizontal-stretch: 1; }
-                        Text { text: AppState.jpeg-quality; font-size: Typography.font-size-sm; color: Palette.text-primary; width: 22px; horizontal-alignment: right; vertical-alignment: center; horizontal-stretch: 0; }
-                        CustomCheck { label: @tr("渐进式"); checked <=> AppState.jpeg-progressive; horizontal-stretch: 0; }
-                    }
-
-                    Rectangle { width: 1px; background: Palette.border; horizontal-stretch: 0; }
-
-                    HorizontalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 4px;
-                        padding-left: 8px;
-                        Text { text: "PNG"; font-size: Typography.font-size-sm; font-weight: Typography.font-weight-semibold; color: Palette.text-primary; width: 36px; horizontal-stretch: 0; vertical-alignment: center; }
-                        CustomSlider { minimum: 1; maximum: 6; value: AppState.png-optimization; changed(v) => { AppState.png-optimization = round(v); } horizontal-stretch: 1; }
-                        Text { text: AppState.png-optimization; font-size: Typography.font-size-sm; color: Palette.text-primary; width: 22px; horizontal-alignment: right; vertical-alignment: center; horizontal-stretch: 0; }
-                        CustomCheck { label: @tr("有损"); checked <=> AppState.png-lossy; horizontal-stretch: 0; }
-                    }
-                }
-
-                // ── WebP + GIF ──
-                HorizontalLayout {
-                    spacing: 0px;
-
-                    HorizontalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 4px;
-                        Text { text: "WebP"; font-size: Typography.font-size-sm; font-weight: Typography.font-weight-semibold; color: Palette.text-primary; width: 36px; horizontal-stretch: 0; vertical-alignment: center; }
-                        CustomSlider { minimum: 1; maximum: 100; value: AppState.webp-quality; changed(v) => { AppState.webp-quality = round(v); } horizontal-stretch: 1; }
-                        Text { text: AppState.webp-quality; font-size: Typography.font-size-sm; color: Palette.text-primary; width: 22px; horizontal-alignment: right; vertical-alignment: center; horizontal-stretch: 0; }
-                        CustomCheck { label: @tr("无损"); checked <=> AppState.webp-lossless; horizontal-stretch: 0; }
-                    }
-
-                    Rectangle { width: 1px; background: Palette.border; horizontal-stretch: 0; }
-
-                    HorizontalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 4px;
-                        padding-left: 8px;
-                        Text { text: "GIF"; font-size: Typography.font-size-sm; font-weight: Typography.font-weight-semibold; color: Palette.text-primary; width: 36px; horizontal-stretch: 0; vertical-alignment: center; }
-                        CustomSlider { minimum: 1; maximum: 100; value: AppState.gif-quality; changed(v) => { AppState.gif-quality = round(v); } horizontal-stretch: 1; }
-                        Text { text: AppState.gif-quality; font-size: Typography.font-size-sm; color: Palette.text-primary; width: 22px; horizontal-alignment: right; vertical-alignment: center; horizontal-stretch: 0; }
-                        CustomCheck { label: @tr("快速"); checked <=> AppState.gif-fast; horizontal-stretch: 0; }
-                    }
-                }
-
-                // ── AVIF ──
-                HorizontalLayout {
-                    spacing: 4px;
-
-                    Text { text: "AVIF"; font-size: Typography.font-size-sm; font-weight: Typography.font-weight-semibold; color: Palette.text-primary; width: 36px; horizontal-stretch: 0; vertical-alignment: center; }
-                    Text { text: @tr("质量"); font-size: Typography.font-size-xs; color: Palette.text-muted; horizontal-stretch: 0; vertical-alignment: center; }
-                    CustomSlider { minimum: 1; maximum: 100; value: AppState.avif-quality; changed(v) => { AppState.avif-quality = round(v); } horizontal-stretch: 2; }
-                    Text { text: AppState.avif-quality; font-size: Typography.font-size-sm; color: Palette.text-primary; width: 22px; horizontal-alignment: right; vertical-alignment: center; horizontal-stretch: 0; }
-                    Rectangle { width: 8px; horizontal-stretch: 0; }
-                    Text { text: @tr("速度"); font-size: Typography.font-size-xs; color: Palette.text-muted; horizontal-stretch: 0; vertical-alignment: center; }
-                    CustomSlider { minimum: 1; maximum: 10; value: AppState.avif-speed; changed(v) => { AppState.avif-speed = round(v); } horizontal-stretch: 1; }
-                    Text { text: AppState.avif-speed; font-size: Typography.font-size-sm; color: Palette.text-primary; width: 14px; horizontal-alignment: right; vertical-alignment: center; horizontal-stretch: 0; }
-                }
-
-                // ── 分隔线 ──
-                Rectangle { height: 1px; background: Palette.border; }
-
-                // ── GPU + 版本 ──
-                HorizontalLayout {
-                    spacing: Palette.spacing-lg;
-                    alignment: stretch;
-
-                    HorizontalLayout {
-                        spacing: Palette.spacing-sm;
-                        Text {
-                            text: @tr("GPU 加速:");
-                            font-size: Typography.font-size-xs;
-                            color: Palette.text-muted;
-                            vertical-alignment: center;
-                        }
-                        Text {
-                            text: AppState.gpu-available
-                                ? AppState.gpu-name
-                                : @tr("不可用");
-                            font-size: Typography.font-size-xs;
-                            color: AppState.gpu-available ? Palette.success : Palette.text-muted;
-                            vertical-alignment: center;
-                        }
-                    }
-
-                    Rectangle { horizontal-stretch: 1; }
-
-                    Text {
-                        text: "TinyImg v0.1.0 | AGPL-3.0";
+                        text: @tr("编码器参数");
                         font-size: Typography.font-size-xs;
                         color: Palette.text-muted;
                         vertical-alignment: center;
                     }
+
+                    Rectangle {
+                        height: 1px;
+                        background: Palette.border;
+                        vertical-stretch: 0;
+                    }
                 }
 
-                Rectangle { height: Palette.spacing-sm; }
+                // ── 格式参数（GridLayout 对齐） ──
+                GridLayout {
+                    spacing: 4px;
+
+                    // Row 0: JPEG + PNG
+                    Row {
+                        Text { col: 0; text: "JPEG"; font-size: Typography.font-size-sm; color: Palette.text-primary; vertical-alignment: center; }
+                        CustomSlider { col: 1; minimum: 1; maximum: 100; value: AppState.jpeg-quality; changed(v) => { AppState.jpeg-quality = round(v); } }
+                        Text { col: 2; text: AppState.jpeg-quality; font-size: Typography.font-size-sm; color: Palette.text-primary; horizontal-alignment: right; vertical-alignment: center; }
+                        CustomCheck { col: 3; label: @tr("渐进式"); checked <=> AppState.jpeg-progressive; }
+                        Rectangle { col: 4; width: 1px; background: Palette.border; }
+                        Text { col: 5; text: "PNG"; font-size: Typography.font-size-sm; color: Palette.text-primary; vertical-alignment: center; }
+                        CustomSlider { col: 6; minimum: 1; maximum: 6; value: AppState.png-optimization; changed(v) => { AppState.png-optimization = round(v); } }
+                        Text { col: 7; text: AppState.png-optimization; font-size: Typography.font-size-sm; color: Palette.text-primary; horizontal-alignment: right; vertical-alignment: center; }
+                        CustomCheck { col: 8; label: @tr("有损"); checked <=> AppState.png-lossy; }
+                    }
+
+                    // Row 1: WebP + GIF
+                    Row {
+                        Text { col: 0; text: "WebP"; font-size: Typography.font-size-sm; color: Palette.text-primary; vertical-alignment: center; }
+                        CustomSlider { col: 1; minimum: 1; maximum: 100; value: AppState.webp-quality; changed(v) => { AppState.webp-quality = round(v); } }
+                        Text { col: 2; text: AppState.webp-quality; font-size: Typography.font-size-sm; color: Palette.text-primary; horizontal-alignment: right; vertical-alignment: center; }
+                        CustomCheck { col: 3; label: @tr("无损"); checked <=> AppState.webp-lossless; }
+                        Rectangle { col: 4; width: 1px; background: Palette.border; }
+                        Text { col: 5; text: "GIF"; font-size: Typography.font-size-sm; color: Palette.text-primary; vertical-alignment: center; }
+                        CustomSlider { col: 6; minimum: 1; maximum: 100; value: AppState.gif-quality; changed(v) => { AppState.gif-quality = round(v); } }
+                        Text { col: 7; text: AppState.gif-quality; font-size: Typography.font-size-sm; color: Palette.text-primary; horizontal-alignment: right; vertical-alignment: center; }
+                        CustomCheck { col: 8; label: @tr("快速"); checked <=> AppState.gif-fast; }
+                    }
+
+                    // Row 2: AVIF（质量 + 速度）
+                    Row {
+                        Text { col: 0; text: "AVIF"; font-size: Typography.font-size-sm; color: Palette.text-primary; vertical-alignment: center; }
+                        CustomSlider { col: 1; minimum: 1; maximum: 100; value: AppState.avif-quality; changed(v) => { AppState.avif-quality = round(v); } }
+                        Text { col: 2; text: AppState.avif-quality; font-size: Typography.font-size-sm; color: Palette.text-primary; horizontal-alignment: right; vertical-alignment: center; }
+                        Text { col: 3; text: @tr("速度"); font-size: Typography.font-size-xs; color: Palette.text-muted; vertical-alignment: center; }
+                        Rectangle { col: 4; }
+                        Text { col: 5; text: ""; }
+                        CustomSlider { col: 6; minimum: 1; maximum: 10; value: AppState.avif-speed; changed(v) => { AppState.avif-speed = round(v); } }
+                        Text { col: 7; text: AppState.avif-speed; font-size: Typography.font-size-sm; color: Palette.text-primary; horizontal-alignment: right; vertical-alignment: center; }
+                    }
+                }
+
+            }
+        }
+    }
+
+    // ===== Footer =====
+    Rectangle {
+        height: 1px;
+        background: Palette.border;
+    }
+
+    Rectangle {
+        height: 28px;
+        background: Palette.bg-secondary;
+        vertical-stretch: 0;
+
+        HorizontalLayout {
+            padding-left: Palette.spacing-md;
+            padding-right: Palette.spacing-md;
+            spacing: Palette.spacing-sm;
+            alignment: stretch;
+
+            Text {
+                text: AppState.gpu-available
+                    ? "GPU: " + AppState.gpu-name
+                    : @tr("GPU: 未启用 (需 --features gpu 编译)");
+                font-size: Typography.font-size-xs;
+                color: Palette.text-muted;
+                vertical-alignment: center;
+            }
+
+            Rectangle { horizontal-stretch: 1; }
+
+            Text {
+                text: "TinyImg v0.1.0";
+                font-size: Typography.font-size-xs;
+                color: Palette.text-muted;
+                vertical-alignment: center;
             }
         }
     }

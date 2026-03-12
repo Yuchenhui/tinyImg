@@ -63,6 +63,105 @@ export component CustomSlider inherits Rectangle {
     }
 }
 
+// 档位滑块 — 轨道 + 拇指 + 数字刻度一体对齐
+export component LevelSlider inherits Rectangle {
+    in-out property <int> value: 3;
+    in property <int> min: 1;
+    in property <int> max: 10;
+    callback changed(int);
+
+    property <int> steps: max - min;
+    // 数字区域左右各留半格的 padding，使首尾数字居中对齐轨道端点
+    property <length> cell-width: root.width / (steps + 1);
+    property <length> track-start: cell-width / 2;
+    property <length> track-len: cell-width * steps;
+    property <float> ratio: steps > 0 ? clamp((value - min) * 1.0 / steps, 0, 1) : 0;
+
+    height: 40px;
+
+    // 轨道背景
+    Rectangle {
+        x: root.track-start;
+        y: 6px;
+        width: root.track-len;
+        height: 4px;
+        border-radius: 2px;
+        background: #e2e8f0;
+
+        // 填充
+        Rectangle {
+            x: 0;
+            y: 0;
+            width: parent.width * root.ratio;
+            height: parent.height;
+            border-radius: parent.border-radius;
+            background: Palette.primary;
+        }
+    }
+
+    // 拇指
+    Rectangle {
+        x: root.track-start + root.track-len * root.ratio - 7px;
+        y: 1px;
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        background: white;
+        border-width: 2px;
+        border-color: track-touch.pressed ? Palette.primary-active : Palette.primary;
+        drop-shadow-blur: 3px;
+        drop-shadow-color: #00000020;
+    }
+
+    // 轨道拖拽区
+    track-touch := TouchArea {
+        y: 0;
+        height: 18px;
+        mouse-cursor: pointer;
+
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.value = root.min + round(clamp((self.mouse-x - root.track-start) / root.track-len, 0, 1) * root.steps);
+                root.changed(root.value);
+            }
+        }
+
+        moved => {
+            if (self.pressed) {
+                root.value = root.min + round(clamp((self.mouse-x - root.track-start) / root.track-len, 0, 1) * root.steps);
+                root.changed(root.value);
+            }
+        }
+    }
+
+    // 数字刻度
+    HorizontalLayout {
+        y: 20px;
+        height: 20px;
+
+        for lv[idx] in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : Rectangle {
+            horizontal-stretch: 1;
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.value = lv;
+                    root.changed(lv);
+                }
+            }
+
+            Text {
+                text: lv;
+                font-size: Typography.font-size-xs;
+                color: lv == root.value ? Palette.primary : Palette.text-muted;
+                font-weight: lv == root.value ? Typography.font-weight-semibold : Typography.font-weight-normal;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
 // 自绘复选框
 export component CustomCheck inherits Rectangle {
     in-out property <bool> checked;
